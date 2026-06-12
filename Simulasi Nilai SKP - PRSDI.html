@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulasi Nilai SKP - PRSDI</title>
+  <!-- React 18 + Babel Standalone (no build step needed) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: #f8fafc; }
+    select { font-family: inherit; }
+    button { font-family: inherit; }
+    /* Loading screen */
+    #loading {
+      position: fixed; inset: 0; background: #14532d;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: white; z-index: 9999;
+    }
+    #loading h2 { margin: 0 0 8px; font-size: 22px; }
+    #loading p  { margin: 0; opacity: .7; font-size: 14px; }
+    .spinner {
+      width: 40px; height: 40px; border: 4px solid rgba(255,255,255,.3);
+      border-top-color: white; border-radius: 50%;
+      animation: spin .8s linear infinite; margin-bottom: 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Loading indicator (shown while Babel compiles JSX) -->
+<div id="loading">
+  <div class="spinner"></div>
+  <h2>🧮 Simulasi Nilai SKP - PRSDI</h2>
+  <p>Memuat aplikasi…</p>
+</div>
+
+<!-- React mount point -->
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo } = React;
+
+// ─── DATA ANGGOTA ─────────────────────────────────────────────────────────────
+const MEMBERS = [
+  { nama:"Abdurrakhman Prasetyadi", nip:"198603282009121005", kr:"HCIV", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Agung Santosa", nip:"196909121988011001", kr:"NLP", jabatan:"Perekayasa Ahli Muda", jenis:"Perekayasa", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Ambar Yoganingrum", nip:"196702141993032002", kr:"HCIV", jabatan:"Peneliti Ahli Utama", jenis:"Peneliti", jenjang:"Ahli Utama", pendidikan:"S3" },
+  { nama:"Ana Hadiana", nip:"196805291987121001", kr:"HCIV", jabatan:"Peneliti Ahli Utama", jenis:"Peneliti", jenjang:"Ahli Utama", pendidikan:"S3" },
+  { nama:"Andi Djalal Latief", nip:"195905241986031004", kr:"NLP", jabatan:"Perekayasa Ahli Utama", jenis:"Perekayasa", jenjang:"Ahli Utama", pendidikan:"S2" },
+  { nama:"Andrari Grahitandaru", nip:"195904111983092001", kr:"DG", jabatan:"Perekayasa Ahli Utama", jenis:"Perekayasa", jenjang:"Ahli Utama", pendidikan:"S2" },
+  { nama:"Andria Arisal", nip:"198005302005021002", kr:"IR", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Andri Fachrur Rozie", nip:"198510102008121002", kr:"IR", jabatan:"Penelaah Teknis Kebijakan", jenis:"Peneliti", nonStandar:true, jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Anne Parlina", nip:"197602141994032001", kr:"IR", jabatan:"Perekayasa Ahli Muda", jenis:"Perekayasa", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Arafat Febriandirza", nip:"198602242020121007", kr:"HCIV", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Aria Bisri", nip:"198802042015021003", kr:"HCIV", jabatan:"Penelaah Teknis Kebijakan", jenis:"Peneliti", nonStandar:true, jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Arya Adhyaksa Waskita", nip:"197904242002121004", kr:"KDE", jabatan:"Penelaah Teknis Kebijakan", jenis:"Peneliti", nonStandar:true, jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Asril", nip:"197305161993011001", kr:"NLP", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Budi Nugroho", nip:"197804142002121007", kr:"DG", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Christine Cecylia Munthe", nip:"199311302019022001", kr:"HCIV", jabatan:"Peneliti Ahli Pertama", jenis:"Peneliti", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Devi Munandar", nip:"197010122000031001", kr:"IR", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Dianadewi Riswantini", nip:"196709291987012001", kr:"IR", jabatan:"Analis Data Ilmiah Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Ekasari Nugraheni", nip:"197209161998032004", kr:"IR", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Elvira Nurfadhilah", nip:"198903222014022005", kr:"NLP", jabatan:"Perekayasa Ahli Muda", jenis:"Perekayasa", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Ekawati Marlina", nip:"198103012005022001", kr:"DG", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Esa Prakasa", nip:"197603222005021003", kr:"HCIV", jabatan:"Peneliti Ahli Utama", jenis:"Peneliti", jenjang:"Ahli Utama", pendidikan:"S3" },
+  { nama:"Foni Agus Setiawan", nip:"197706272009121001", kr:"KDE", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Gunarso", nip:"196406141989031003", kr:"NLP", jabatan:"Perekayasa Ahli Madya", jenis:"Perekayasa", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Harnum Annisa Prafitia", nip:"198904302010122005", kr:"DG", jabatan:"Perekayasa Ahli Muda", jenis:"Perekayasa", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Hengki Muradi", nip:"198804052020121003", kr:"DG", jabatan:"Peneliti Ahli Pertama", jenis:"Peneliti", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Iftitahu Ni`mah", nip:"198606062010122003", kr:"NLP", jabatan:"Peneliti Ahli Pertama", jenis:"Peneliti", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Ira Maryati", nip:"197810112005022003", kr:"IR", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Irfan Asfy Fakhry Anto", nip:"198707132015021002", kr:"IR", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Kokoy Siti Komariah", nip:"198702112024032001", kr:"NLP", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Lyla Ruslana Aini", nip:"198905162014022001", kr:"NLP", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Lindung Parningotan Manik", nip:"198604142018031001", kr:"KDE", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"M. Teduh Uliniansyah", nip:"196704091986081001", kr:"NLP", jabatan:"Perekayasa Ahli Madya", jenis:"Perekayasa", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Muhamad Jafar Elly", nip:"196902201991031003", kr:"KDE", jabatan:"Penelaah Teknis Kebijakan", jenis:"Peneliti", nonStandar:true, jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"M. Yudhi Rezaldi", nip:"197906112008011008", kr:"HCIV", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Nimas Ayu Untariyati", nip:"197806272001122001", kr:"DG", jabatan:"Perekayasa Ahli Madya", jenis:"Perekayasa", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Nungki Dian Sulistyo Darmayanti", nip:"199212242018012003", kr:"IR", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Nuraisa Novia Hidayati", nip:"198911232014022001", kr:"NLP", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Nuryani", nip:"198003122006042004", kr:"NLP", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Prabu Kresna Putra", nip:"199001072014021003", kr:"NLP", jabatan:"Perekayasa Ahli Muda", jenis:"Perekayasa", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Purnomo Husnul Khotimah", nip:"198003232005022002", kr:"IR", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Radhiyatul Fajri", nip:"199005312020122006", kr:"NLP", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Rahardito Dio Prastowo", nip:"199204202020121010", kr:"KDE", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Rezzy Eko Caraka", nip:"199401272022021001", kr:"DG", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Ridwan Suhud", nip:"197804032006041002", kr:"HCIV", jabatan:"Penelaah Teknis Kebijakan", jenis:"Peneliti", nonStandar:true, jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Rini Wijayanti", nip:"197909032005022001", kr:"NLP", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Rio Nurtantyana", nip:"199312152024031001", kr:"HCIV", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Rival Adrian Juliansyah", nip:"199707112020121007", kr:"DG", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S1" },
+  { nama:"Rumadi", nip:"199104022019021001", kr:"HCIV", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Satrio Adi Priyambada", nip:"199312282024031001", kr:"KDE", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Siska Pebiana", nip:"199402122019022003", kr:"NLP", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Siti Kania Kushadiani", nip:"197906042002122007", kr:"KDE", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Tedy Mutakin", nip:"197907242006041002", kr:"KDE", jabatan:"Analis Pemanfaatan Ilmu Pengetahuan dan Teknologi Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S1" },
+  { nama:"Tri Sampurno", nip:"196703181986021001", kr:"NLP", jabatan:"Perekayasa Ahli Madya", jenis:"Perekayasa", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Wawan Hendriawan Nur", nip:"198207062006041019", kr:"KDE", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Wiwin Suwarningsih", nip:"197303142006042002", kr:"IR", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Yaniasih", nip:"198307132008012009", kr:"NLP", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S3" },
+  { nama:"Yuyun", nip:"198405142023211007", kr:"NLP", jabatan:"Peneliti Ahli Madya", jenis:"Peneliti", jenjang:"Ahli Madya", pendidikan:"S3" },
+  { nama:"Zain Saifullah", nip:"196112221987111002", kr:"DG", jabatan:"Perekayasa Ahli Madya", jenis:"Perekayasa", jenjang:"Ahli Madya", pendidikan:"S2" },
+  { nama:"Andre Sihombing", nip:"198507092015021003", kr:"IR", jabatan:"Peneliti Ahli Pertama", jenis:"Peneliti", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"Aang Gunawan S", nip:"198208142006041005", kr:"HCIV", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Ariani Indrawati", nip:"199102252019022003", kr:"KDE", jabatan:"Peneliti Ahli Muda", jenis:"Peneliti", jenjang:"Ahli Muda", pendidikan:"S2" },
+  { nama:"Prihartanto", panggilan:"Prie", nip:"196903161996031001", kr:"NLP", jabatan:"Perekayasa Ahli Utama", jenis:"Perekayasa", jenjang:"Ahli Utama", pendidikan:"S3" },
+  { nama:"anonim1",  nip:"197506230420011234", kr:"DG",   jabatan:"Peneliti Ahli Pertama",   jenis:"Peneliti",   jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"anonim2",  nip:"198312152008031567", kr:"NLP",  jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S1" },
+  { nama:"anonim3",  nip:"197908281999041890", kr:"HCIV", jabatan:"Perekayasa Ahli Muda",    jenis:"Perekayasa", jenjang:"Ahli Muda",    pendidikan:"S2" },
+  { nama:"anonim4",  nip:"198104172003021345", kr:"IR",   jabatan:"Perekayasa Ahli Muda",    jenis:"Perekayasa", jenjang:"Ahli Muda",    pendidikan:"S2" },
+  { nama:"anonim5",  nip:"197712302001031678", kr:"HCIV", jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"anonim6",  nip:"198507142009121901", kr:"DG",   jabatan:"Peneliti Ahli Pertama",   jenis:"Peneliti",   jenjang:"Ahli Pertama", pendidikan:"S1" },
+  { nama:"anonim7",  nip:"197603182002031234", kr:"IR",   jabatan:"Perekayasa Ahli Madya",   jenis:"Perekayasa", jenjang:"Ahli Madya",   pendidikan:"S2" },
+  { nama:"anonim8",  nip:"198209072006042567", kr:"KDE",  jabatan:"Peneliti Ahli Muda",      jenis:"Peneliti",   jenjang:"Ahli Muda",    pendidikan:"S2" },
+  { nama:"anonim9",  nip:"197811252000031890", kr:"NLP",  jabatan:"Perekayasa Ahli Pertama", jenis:"Perekayasa", jenjang:"Ahli Pertama", pendidikan:"S2" },
+  { nama:"anonim10", nip:"197204111997031345", kr:"DG",   jabatan:"Perekayasa Ahli Utama",   jenis:"Perekayasa", jenjang:"Ahli Utama",   pendidikan:"S2" },
+  { nama:"anonim11", nip:"197309281996041678", kr:"DG",   jabatan:"Perekayasa Ahli Utama",   jenis:"Perekayasa", jenjang:"Ahli Utama",   pendidikan:"S2" },
+  { nama:"anonim12", nip:"197601151998031901", kr:"NLP",  jabatan:"Peneliti Ahli Utama",     jenis:"Peneliti",   jenjang:"Ahli Utama",   pendidikan:"S3" },
+  { nama:"anonim13", nip:"198710302012121234", kr:"IR",   jabatan:"Peneliti Ahli Pertama",   jenis:"Peneliti",   jenjang:"Ahli Pertama", pendidikan:"S3" },
+  { nama:"anonim14", nip:"198904162014022567", kr:"NLP",  jabatan:"Perekayasa Ahli Muda",    jenis:"Perekayasa", jenjang:"Ahli Muda",    pendidikan:"S3" },
+  { nama:"anonim15", nip:"198612082011011890", kr:"IR",   jabatan:"Peneliti Ahli Pertama",   jenis:"Peneliti",   jenjang:"Ahli Pertama", pendidikan:"S3" },
+  { nama:"anonim16", nip:"199001172015021345", kr:"NLP",  jabatan:"Peneliti Ahli Muda",      jenis:"Peneliti",   jenjang:"Ahli Muda",    pendidikan:"S3" },
+  { nama:"anonim17", nip:"198508232009121678", kr:"HCIV", jabatan:"Perekayasa Ahli Muda",    jenis:"Perekayasa", jenjang:"Ahli Muda",    pendidikan:"S2" },
+  { nama:"anonim18", nip:"197705141999031901", kr:"KDE",  jabatan:"Perekayasa Ahli Utama",   jenis:"Perekayasa", jenjang:"Ahli Utama",   pendidikan:"S2" },
+  { nama:"anonim19", nip:"198306092007041234", kr:"DG",   jabatan:"Peneliti Ahli Muda",      jenis:"Peneliti",   jenjang:"Ahli Muda",    pendidikan:"S3" },
+  { nama:"anonim20", nip:"198811272014022567", kr:"HCIV", jabatan:"Peneliti Ahli Madya",     jenis:"Peneliti",   jenjang:"Ahli Madya",   pendidikan:"S1" },
+];
+
+// Index jenjang: 0=Utama, 1=Madya, 2=Muda, 3=Pertama
+const JI = { "Ahli Utama":0, "Ahli Madya":1, "Ahli Muda":2, "Ahli Pertama":3 };
+
+// Nilai Dasar & Batas Maksimal per jenjang
+// Nilai Dasar per bulan per jenjang (Kep. KaBRIN No. 15/I/HK/2026, Sublampiran 1)
+// Indeks: [Ahli Utama, Ahli Madya, Ahli Muda, Ahli Pertama]
+const ND_TABLE = {
+  PS: {
+    nd: [
+      [2.1,  1.7,  1.3,  0.8 ], // bulan 1
+      [4.2,  3.3,  2.5,  1.7 ],
+      [6.3,  5,    3.8,  2.5 ],
+      [8.3,  6.7,  5,    3.3 ],
+      [10.4, 8.3,  6.3,  4.2 ],
+      [12.5, 10,   7.5,  5   ],
+      [14.6, 11.7, 8.8,  5.8 ],
+      [16.7, 13.3, 10,   6.7 ],
+      [18.8, 15,   11.3, 7.5 ],
+      [20.8, 16.7, 12.5, 8.3 ],
+      [22.9, 18.3, 13.8, 9.2 ],
+      [25,   20,   15,   10  ], // bulan 12
+    ],
+    max: [25, 20, 15, 10],
+  },
+  OC: {
+    nd: [
+      [1.7,  1.7,  0.8,  0.8 ],
+      [3.3,  3.3,  1.7,  1.7 ],
+      [5,    5,    2.5,  2.5 ],
+      [6.7,  6.7,  3.3,  3.3 ],
+      [8.3,  8.3,  4.2,  4.2 ],
+      [10,   10,   5,    5   ],
+      [11.7, 11.7, 5.8,  5.8 ],
+      [13.3, 13.3, 6.7,  6.7 ],
+      [15,   15,   7.5,  7.5 ],
+      [16.7, 16.7, 8.3,  8.3 ],
+      [18.3, 18.3, 9.2,  9.2 ],
+      [20,   20,   10,   10  ],
+    ],
+    max: [30, 30, 20, 20],
+  },
+  OP: {
+    nd: [
+      [3.33,  3.33,  3.33,  3.33 ],
+      [6.67,  6.67,  6.67,  6.67 ],
+      [10,    10,    10,    10   ],
+      [13.33, 13.33, 13.33, 13.33],
+      [16.67, 16.67, 16.67, 16.67],
+      [20,    20,    20,    20   ],
+      [23.33, 23.33, 23.33, 23.33],
+      [26.67, 26.67, 26.67, 26.67],
+      [30,    30,    30,    30   ],
+      [33.33, 33.33, 33.33, 33.33],
+      [36.67, 36.67, 36.67, 36.67],
+      [40,    40,    40,    40   ],
+    ],
+    max: [80, 80, 80, 80],
+  },
+  PK: {
+    nd: [
+      [1.25, 1.67, 2.92,  3.33 ],
+      [2.5,  3.33, 5.83,  6.67 ],
+      [3.75, 5,    8.75,  10   ],
+      [5,    6.67, 11.67, 13.33],
+      [6.25, 8.33, 14.58, 16.67],
+      [7.5,  10,   17.5,  20   ],
+      [8.75, 11.67,20.42, 23.33],
+      [10,   13.33,23.33, 26.67],
+      [11.25,15,   26.25, 30   ],
+      [12.5, 16.67,29.17, 33.33],
+      [13.75,18.33,32.08, 36.67],
+      [15,   20,   35,    40   ],
+    ],
+    max: [15, 20, 35, 40],
+  },
+};
+
+function getND(jenjang, bulan) {
+  const i = JI[jenjang];
+  const b = Math.max(1, Math.min(12, bulan)) - 1;
+  return {
+    PS:  ND_TABLE.PS.nd[b][i],  mPS: ND_TABLE.PS.max[i],
+    OC:  ND_TABLE.OC.nd[b][i],  mOC: ND_TABLE.OC.max[i],
+    OP:  ND_TABLE.OP.nd[b][i],  mOP: ND_TABLE.OP.max[i],
+    PK:  ND_TABLE.PK.nd[b][i],  mPK: ND_TABLE.PK.max[i],
+  };
+}
+
+// ─── ITEM BUTIR SKP ──────────────────────────────────────────────────────────
+const PS_ITEMS = [
+  { id:"ps01", kat:"Tenaga Ahli", label:"Menjadi tenaga ahli dalam forum teknis internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif sebagai tenaga ahli yang diundang atau ditunjuk dalam forum teknis tingkat internasional untuk memberikan masukan ilmiah/teknis, menjadi narasumber, anggota panel, atau penyusun dokumen teknis/standar 2. Berlaku kelipatan per- program/kegiatan", bkt:"1. Surat undangan sebagai expert /Surat tugas dari instansi/ Letter of appointment sebagai anggota working group /technical committee /SK/dokumen penunjukan resmi/email resmi dari penyelenggara yang menyebutkan peran; dan 2. Laporan kegiatan", s:[5,5,5,5] },
+  { id:"ps02", kat:"Tenaga Ahli", label:"Menjadi tenaga ahli dalam forum teknis nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif sebagai tenaga ahli yang diundang atau ditunjuk dalam forum teknis tingkat nasional untuk memberikan masukan ilmiah/teknis, menjadi narasumber, anggota panel, atau penyusun dokumen teknis/standar 2. Berlaku kelipatan per- program/kegiatan", bkt:"1. Surat undangan/Surat tugas/ Letter of appointment sebagai anggota working group / technical committee /Surat Keputusan/dokumen penunjukan resmi/email resmi dari penyelenggara yang menyebutkan peran; dan 2. Laporan kegiatan", s:[2.5,2.5,2.5,2.5] },
+  { id:"ps03", kat:"Perwakilan Negara", label:"Peran aktif dalam program/kegiatan internasional dan antar Kementerian/Lembaga, Industri", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Keanggotaan resmi seseorang sebagai bagian dari tim pelaksana suatu program/kegiatan isu strategis yang melibatkan mitra internasional dan antar Kementerian/Lembaga (Contoh implementasi konvensi minamata, perubahan iklim, dll) 2. Berlaku kelipatan per- program/kegiatan", bkt:"1. Status keanggotaan resmi (Surat Keputusan/kontrak kerja/surat keterangan dari mitra internasional); dan 2. Laporan kegiatan", s:[5,5,5,5] },
+  { id:"ps04", kat:"Perwakilan Negara", label:"Menjadi Ketua Delegasi Republik Indonesia", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Sebagai ketua delegasi Pemerintah Republik Indonesia yang ditugaskan untuk mewakili negara dalam suatu forum, perundingan, pertemuan, atau kegiatan resmi di tingkat internasional maupun bilateral 2. Berlaku kelipatan per- program/kegiatan", bkt:"1. Surat Tugas/Surat Keputusan Pejabat yang Berwenang; dan 2. Laporan Kegiatan", s:[5,5,5,5] },
+  { id:"ps05", kat:"Perwakilan Negara", label:"Menjadi Anggota Delegasi Republik Indonesia", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Sebagai anggota delegasi Pemerintah Republik Indonesia yang ditugaskan untuk mewakili negara dalam suatu forum, perundingan, pertemuan, atau kegiatan resmi di tingkat internasional maupun bilateral 2. Berlaku kelipatan per- program/kegiatan", bkt:"1. Surat Tugas/Surat Keputusan Pejabat yang Berwenang; dan 2. Laporan Kegiatan", s:[2.5,2.5,2.5,2.5] },
+  { id:"ps06", kat:"Perwakilan Negara", label:"National representative organisasi internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Perwakilan resmi suatu negara yang ditunjuk oleh pemerintah atau otoritas berwenang untuk mewakili kepentingan nasional dalam suatu organisasi internasional tertentu 2. Tidak membedakan tingkat jabatan pada struktur organisasi", bkt:"1. Surat Tugas/Surat Keputusan Pejabat yang Berwenang; dan 2. Laporan Kegiatan", s:[25,20,15,10] },
+  { id:"ps07", kat:"Pendanaan Riset", label:"Mendapatkan pendanaan kegiatan riset yang bersumber dari luar negeri", ind:"Jumlah pendanaan yang didapatkan", tgt:"1", sat:"Program Pendanan", penj:"1. Keberhasilan memperoleh dukungan finansial untuk pelaksanaan penelitian dari lembaga, organisasi, pemerintah, universitas, atau badan donor dari luar negeri 2. Pendanaan yang diperoleh akumulasi minimal 100 (seratus) juta rupiah dalam satu tahun 3. Berlaku untuk semua anggota tim 4. Berlaku multiyears 5. Berlaku kelipatan per program/kegiatan jika satu program mendapatkan minimal 100 (seratus) juta rupiah", bkt:"1. Dokumen persetujuan hibah/kontrak pendanaan/surat keterangan baik incash maupun inkind serta tercantum sebagai penerima dana (koordinator atau anggota tim); dan 2. Laporan per kegiatan pada tahun berjalan", s:[10,10,10,10] },
+  { id:"ps08", kat:"Pendanaan Riset", label:"Mendapatkan pendanaan kegiatan riset yang bersumber dari dalam negeri/eksternal BRIN", ind:"Jumlah pendanaan yang didapatkan", tgt:"1", sat:"Program Pendanan", penj:"1. Keberhasilan memperoleh dukungan finansial untuk pelaksanaan riset dari lembaga, organisasi, pemerintah, universitas, atau badan donor dari dalam negeri 2. Pendanaan yang diperoleh akumulasi minimal 50 (lima puluh) juta rupiah dalam satu tahun 3. Berlaku untuk semua anggota tim 4. Berlaku multiyears 5. Berlaku kelipatan per program/kegiatan jika satu program mendapatkan minimal 50 (lima puluh) juta rupiah", bkt:"1. Dokumen persetujuan hibah/kontrak pendanaan/surat keterangan baik incash maupun inkind serta tercantum sebagai penerima dana (koordinator atau anggota tim); dan 2. Laporan per kegiatan pada tahun berjalan", s:[5,5,5,5] },
+  { id:"ps09", kat:"Pendanaan Riset", label:"Mendapatkan pendanaan kegiatan riset yang bersumber dari internal BRIN", ind:"Jumlah pendanaan yang didapatkan", tgt:"1", sat:"Program Pendanan", penj:"1. Keberhasilan memperoleh dukungan finansial untuk pelaksanaan Riset dari internal BRIN 2. Berlaku untuk semua anggota tim 3. Berlaku multiyears 4. Berlaku kelipatan per program kegiatan", bkt:"1. Surat Keputusan/Surat keterangan penerimaan; dan 2. Laporan per kegiatan pada tahun berjalan", s:[2.5,2.5,2.5,2.5] },
+  { id:"ps10", kat:"Tugas", label:"Menjadi ketua/wakil ketua/sekretaris satuan tugas di tingkat internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk memimpin suatu kegiatan yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup internasional guna menangani isu strategis tertentu 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[10,10,10,10] },
+  { id:"ps11", kat:"Tugas", label:"Menjadi anggota satuan tugas di tingkat internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk menjadi anggota suatu kegiatan yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup internasional guna menangani isu strategis tertentu 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[5,5,5,5] },
+  { id:"ps12", kat:"Tugas", label:"Menjadi ketua/wakil ketua/sekretaris satuan tugas di tingkat nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk memimpin suatu kegiatan yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup nasional guna menangani isu strategis tertentu (termasuk kegiatan pemilu) 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[7.5,7.5,7.5,7.5] },
+  { id:"ps13", kat:"Tugas", label:"Menjadi anggota satuan tugas di tingkat nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk menjadi anggota suatu satuan tugas (satgas) yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup nasional guna menangani isu strategis tertentu (termasuk kegiatan pemilu) 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[5,5,5,5] },
+  { id:"ps14", kat:"Tugas", label:"Menjadi koordinator/ketua /wakil ketua/sekretaris satuan tugas pada tingkat Lembaga/Organisasi Riset/Pusat Riset (termasuk tim manajemen risiko, reformasi birokrasi, kerja sama, penyusun modul atau tugas khusus di Pusat Riset)", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk memimpin suatu satuan tugas (satgas) yang dibentuk oleh Kepala BRIN/Kepala Organisasi Riset/Kepala Pusat Riset guna menangani isu strategis tertentu/tugas khusus di Organisasi Riset dan Pusat Riset 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[5,5,5,5] },
+  { id:"ps15", kat:"Tugas", label:"Menjadi anggota satuan tugas pada tingkat Lembaga/Organisasi Riset/Pusat riset (termasuk tim manajemen resiko, reformasi birokrasi, kerja sama, penyusun modul atau tugas khusus di Pusat Riset)", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk menjadi anggota suatu satuan tugas (satgas) yang dibentuk oleh Kepala BRIN/Kepala Organisasi Riset/Kepala Pusat Riset guna menangani isu strategis tertentu 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[3,3,3,3] },
+  { id:"ps16", kat:"Kepanitiaan Menjadi", label:"ketua/wakil ketua/sekretaris penyelelenggaraan kegiatan internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk memimpin suatu kegiatan yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup internasional guna mengadakan acara tertentu 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[5,5,5,5] },
+  { id:"ps17", kat:"Kepanitiaan Menjadi anggota", label:"penyelelenggaraan kegiatan internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk menjadi anggota suatu kegiatan yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup internasional guna mengadakan acara tertentu 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[3,3,3,3] },
+  { id:"ps18", kat:"Kepanitiaan Menjadi", label:"ketua/wakil ketua/sekretaris penyelelenggaraan kegiatan nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk memimpin suatu kegiatan yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup nasional guna mengadakan acara tertentu 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[3,3,3,3] },
+  { id:"ps19", kat:"Kepanitiaan Menjadi anggota", label:"penyelenggaraan kegiatan pada tingkat nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk menjadi anggota suatu kegiatan yang dibentuk oleh pemerintah atau lembaga berwenang dalam lingkup nasional guna mengadakan acara tertentu 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan/Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[1.5,1.5,1.5,1.5] },
+  { id:"ps20", kat:"Kepanitiaan Menjadi", label:"ketua/wakil ketua/sekretaris panitia penyelelenggaraan kegiatan internal BRIN", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk memimpin suatu kegiatan yang diselenggarakan internal BRIN 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan /Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[1.5,1.5,1.5,1.5] },
+  { id:"ps21", kat:"Kepanitiaan Menjadi anggota", label:"panitia penyelenggaraan kegiatan internal BRIN", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi kepada seseorang untuk menjadi anggota penitia kegiatan yang diselenggarakan internal BRIN 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan /Surat keterangan resmi; dan 2. Laporan per kegiatan", s:[1,1,1,1] },
+  { id:"ps22", kat:"Saksi Ahli", label:"Menjadi saksi ahli berdasarkan hasil riset yang dilakukan", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Keterlibatan resmi sebagai saksi ahli yang memberikan keterangan profesional berdasarkan hasil riset yang memerlukan proses pengolahan data atau keahlian ilmiah dalam proses hukum 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat penunjukan/panggilan resmi sebagai saksi ahli/surat permintaan resmi; dan 2. Laporan atau materi keterangan ahli", s:[5,5,5,5] },
+  { id:"ps23", kat:"Tim Kegiatan Riset", label:"Menjadi ketua kegiatan Riset yang melibatkan pihak eksternal instansi", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi sebagai pimpinan kegiatan riset yang melibatkan pihak eksternal instansi 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan /Surat tugas sebagai ketua; dan 2. Proposal atau dokumen kegiatan mencantumkan nama sebagai ketua 3. Laporan per kegiatan", s:[15,15,15,15] },
+  { id:"ps24", kat:"Tim Kegiatan Riset", label:"Menjadi anggota kegiatan Riset yang melibatkan pihak eksternal instansi", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi sebagai anggota kegiatan riset yang melibatkan pihak eksternal instansi 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan /Surat tugas sebagai anggota 2. Proposal atau dokumen kegiatan mencantumkan nama sebagai anggota; dan 3. Laporan per kegiatan", s:[7.5,7.5,7.5,7.5] },
+  { id:"ps25", kat:"Tim Kegiatan Riset", label:"Menjadi ketua/ leader kegiatan/kelompok riset pada internal instansi", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi sebagai pimpinan kegiatan riset pada internal instansi 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan /Surat tugas sebagai ketua 2. Proposal atau dokumen kegiatan mencantumkan nama sebagai ketua; dan 3. Laporan per kegiatan", s:[10,10,10,10] },
+  { id:"ps26", kat:"Tim Kegiatan Riset", label:"Menjadi anggota kegiatan riset pada internal instansi", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Penugasan resmi sebagai anggota kegiatan riset pada internal instansi 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat Keputusan /Surat tugas sebagai anggota 2. Proposal atau dokumen kegiatan mencantumkan nama sebagai anggota; dan 3. Laporan per kegiatan", s:[5,5,5,5] },
+  { id:"ps27", kat:"Tim Reviewer", label:"Sebagai juri lomba karya ilmiah internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Berperan sebagai penilai independen dalam kegiatan kompetisi karya ilmiah tingkat internasional yang diselenggarakan oleh lembaga pemerintah, perguruan tinggi, organisasi profesi, atau lembaga internasional 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat penunjukkan dan laporan pelaksanaan; dan 2. Laporan per kegiatan", s:[7.5,7.5,7.5,7.5] },
+  { id:"ps28", kat:"Tim Reviewer", label:"Sebagai juri lomba karya ilmiah nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Berperan sebagai penilai independen dalam kegiatan kompetisi karya ilmiah tingkat nasional yang diselenggarakan oleh lembaga pemerintah, perguruan tinggi, organisasi profesi, atau lembaga nasional 2. Berlaku kelipatan per program/kegiatan", bkt:"1. Surat penunjukkan dan laporan pelaksanaan; dan 2. Laporan per kegiatan", s:[5,5,5,5] },
+  { id:"ps29", kat:"Tim Reviewer", label:"Peer review untuk naskah jurnal ilmiah terindeks global bereputasi tinggi", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Naskah", penj:"1. Pelaksanaan tugas penelaahan ilmiah terhadap naskah jurnal sebagai reviewer yang ditunjuk oleh editor pada jurnal ilmiah terindeks global bereputasi tinggi 2. Berlaku kelipatan per naskah", bkt:"1. Surat/email penugasan reviewer; dan 2. Bukti submission review (tanpa melanggar kerahasiaan)/Sertifikat atau ucapan terima kasih telah mereviu", s:[5,5,5,5] },
+  { id:"ps30", kat:"Tim Reviewer", label:"Peer review untuk naskah jurnal ilmiah terindeks global bereputasi menengah", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Naskah", penj:"1. Pelaksanaan tugas penelaahan ilmiah terhadap naskah jurnal sebagai reviewer yang ditunjuk oleh editor pada jurnal ilmiah terindeks global bereputasi menengah 2. Berlaku kelipatan per naskah", bkt:"1. Surat/email penugasan reviewer; dan 2. Bukti submission review (tanpa melanggar kerahasiaan)/Sertifikat atau ucapan terima kasih telah melakukan review", s:[4,4,4,4] },
+  { id:"ps31", kat:"Tim Reviewer", label:"Peer review untuk naskah jurnal ilmiah/buku terindeks global bereputasi", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Naskah", penj:"1. Pelaksanaan tugas penelaahan ilmiah terhadap naskah jurnal sebagai reviewer yang ditunjuk oleh editor pada jurnal ilmiah terindeks global bereputasi 2. Berlaku kelipatan per naskah", bkt:"1. Surat/email penugasan reviewer; dan 2. Bukti submission review (tanpa melanggar kerahasiaan)/Sertifikat atau ucapan terima kasih telah melakukan review", s:[3,3,3,3] },
+  { id:"ps32", kat:"Tim Reviewer", label:"Peer review untuk naskah jurnal ilmiah terindeks global lainnya", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Naskah", penj:"1. Pelaksanaan tugas penelaahan ilmiah terhadap naskah jurnal sebagai reviewer yang ditunjuk oleh editor pada jurnal ilmiah terindeks global lainnya 2. Berlaku kelipatan per naskah", bkt:"1. Surat/email penugasan reviewer; dan 2. Bukti submission review (tanpa melanggar kerahasiaan)/Sertifikat atau ucapan terima kasih telah melakukan review", s:[2,2,2,2] },
+  { id:"ps33", kat:"Tim Reviewer", label:"Peer review untuk naskah jurnal ilmiah nasional", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Naskah", penj:"1. Pelaksanaan tugas penelaahan ilmiah terhadap naskah jurnal sebagai reviewer yang ditunjuk oleh editor pada jurnal ilmiah nasional 2. Berlaku kelipatan per naskah", bkt:"1. Surat/email penugasan reviewer; dan 2. Bukti submission review (tanpa melanggar kerahasiaan)/Sertifikat atau ucapan terima kasih telah melakukan review", s:[2,2,2,2] },
+  { id:"ps34", kat:"Tim Reviewer", label:"Peer review untuk prosiding internasional", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Naskah", penj:"1. Pelaksanaan tugas penelaahan ilmiah terhadap naskah prosiding sebagai reviewer yang ditunjuk oleh editor pada prosiding internasional 2. Berlaku kelipatan per naskah", bkt:"1. Surat/email penugasan reviewer; dan 2. Bukti submission review (tanpa melanggar kerahasiaan)/Sertifikat atau ucapan terima kasih telah melakukan review", s:[2,2,2,2] },
+  { id:"ps35", kat:"Tim Reviewer", label:"Peer review untuk prosiding nasional", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Naskah", penj:"1. Pelaksanaan tugas penelaahan ilmiah terhadap naskah prosiding sebagai reviewer yang ditunjuk oleh editor pada prosiding nasional 2. Berlaku kelipatan per naskah", bkt:"1. Surat/email penugasan reviewer; dan 2. Bukti submission review (tanpa melanggar kerahasiaan)/Sertifikat atau ucapan terima kasih telah melakukan review", s:[1,1,1,1] },
+  { id:"ps36", kat:"Tim Reviewer", label:"Dewan Redaksi ( Editorial Board ) pada publikasi internasional", ind:"Jumlah media publikasi", tgt:"1", sat:"Media Publikasi", penj:"1. Penunjukan sebagai anggota dewan redaksi pada publikasi ilmiah internasional dengan fungsi strategis dalam kebijakan dan pengembangan media publikasi 2. Berlaku kelipatan per media publikasi", bkt:"1. Surat penunjukan/kontrak editor/Nama tercantum dalam struktur redaksi; dan 2. Bukti pekerjaan dewan redaksi", s:[5,5,5,5] },
+  { id:"ps37", kat:"Tim Reviewer", label:"Dewan Redaksi ( Editorial Board ) pada publikasi nasional", ind:"Jumlah media publikasi", tgt:"1", sat:"Media Publikasi", penj:"1. Penunjukan sebagai anggota dewan redaksi pada publikasi ilmiah nasional dengan fungsi strategis dalam kebijakan dan pengembangan media publikasi 2. Berlaku kelipatan per media publikasi", bkt:"1. Surat penunjukan/kontrak editor/nama tercantum dalam struktur redaksi; dan 2. Bukti pekerjaan dewan redaksi", s:[3,3,3,3] },
+  { id:"ps38", kat:"Tim Reviewer", label:"Menjadi Ketua Komisi Etik", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penunjukan resmi sebagai ketua komisi yang bertanggung jawab memimpin proses penilaian dan persetujuan etik terhadap kegiatan riset", bkt:"1. Surat Keputusan penunjukan; dan 2. Dokumen hasil sidang /berita acara", s:[25,20,null,null] },
+  { id:"ps39", kat:"Tim Reviewer", label:"Menjadi Sekretaris Komisi Etik", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penunjukan resmi sebagai sekretaris komisi yang bertanggung jawab memimpin proses penilaian dan persetujuan etik terhadap kegiatan riset", bkt:"1. Surat Keputusan penunjukan; dan 2. Dokumen hasil sidang / berita acara", s:[20,15,10,7.5] },
+  { id:"ps40", kat:"Tim Reviewer", label:"Menjadi Anggota Komisi Etik", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan resmi sebagai anggota komisi yang melakukan evaluasi etik terhadap proposal atau kegiatan Riset", bkt:"1. Surat Keputusan penunjukan; dan 2. Dokumen hasil sidang / berita acara", s:[12.5,10,7.5,5] },
+  { id:"ps41", kat:"Tim Reviewer", label:"Menjadi Ketua Majelis Asesor Jabatan Fungsional Bidang dan Teknologi", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan resmi sebagai ketua majelis yang memimpin proses asesmen atau evaluasi terhadap individu, program, atau unit kerja", bkt:"Surat Keputusan Majelis Asesor", s:[25,null,null,null] },
+  { id:"ps42", kat:"Tim Reviewer", label:"Menjadi Anggota Majelis Asesor Jabatan Fungsional Bidang dan Teknologi", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan resmi sebagai anggota majelis dalam proses asesmen atau evaluasi formal", bkt:"Surat Keputusan Majelis Asesor", s:[12.5,null,null,null] },
+  { id:"ps43", kat:"Tim Reviewer", label:"Menjadi Ketua Majelis Profesor Riset", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan resmi sebagai ketua majelis yang bertugas memberikan pertimbangan dan penelaahan atas usulan konsep naskah orasi ilmiah bagi kandidat profesor riset", bkt:"Surat Keputusan Majelis Asesor", s:[25,null,null,null] },
+  { id:"ps44", kat:"Tim Reviewer", label:"Menjadi Sekretaris Majelis Profesor Riset", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan resmi sebagai sekretaris majelis yang bertugas memberikan pertimbangan dan penelaahan atas usulan konsep naskah orasi ilmiah bagi kandidat profesor riset", bkt:"Surat Keputusan Majelis Asesor", s:[20,null,null,null] },
+  { id:"ps45", kat:"Tim Reviewer", label:"Menjadi Anggota Tim Penelaah Naskah Orasi", ind:"Jumlah naskah yang ditelaah", tgt:"1", sat:"Surat Tugas", penj:"1. Penugasan resmi sebagai anggota tim penelaah naskah orasi 2. Berlaku kelipatan per naskah orasi", bkt:"1. Surat Keputusan penunjukan; dan 2. Laporan per kegiatan", s:[5,null,null,null] },
+  { id:"ps46", kat:"Tim Reviewer", label:"Menjadi Anggota Tim Penilai/ Tim Asesor dari Uji Kompetensi Jabatan Fungsional atau Sertifikasi SKKNI", ind:"Jumlah kegiatan", tgt:"1", sat:"Surat Tugas", penj:"1. Penugasan sebagai anggota tim Anggota Tim Penilai/ Tim Asesor dari Uji Kompetensi Jabatan Fungsional atau Sertifikasi Standar Kompetensi Kerja Nasional Indonesia (SKKNI) 2. Berlaku kelipatan per kegiatan", bkt:"1. Surat penugasan; dan 2. Laporan per kegiatan", s:[2,2,2,2] },
+  { id:"ps47", kat:"Tim Reviewer", label:"Menjadi Anggota Tim Reviewer Tugas Belajar/ Degree by research", ind:"Jumlah kegiatan", tgt:"1", sat:"Surat Tugas", penj:"1. Penugasan sebagai anggota tim reviewer tugas belajar/ degree by research 2. Berlaku kelipatan per kegiatan", bkt:"1. Surat penugasan; dan 2. Laporan per kegiatan", s:[2,2,2,null] },
+  { id:"ps48", kat:"Tim Reviewer", label:"Menjadi reviewer proposal Riset di eksternal BRIN", ind:"Jumlah proposal yang ditelaah", tgt:"1", sat:"Surat Tugas", penj:"1. Penugasan sebagai tim reviewer proposal riset di eksternal BRIN 2. Berlaku kelipatan per proposal", bkt:"1. Surat penugasan; dan 2. Dokumen hasil reviu", s:[2,2,null,null] },
+  { id:"ps49", kat:"Tim Reviewer", label:"Menjadi reviewer proposal Riset di internal BRIN", ind:"Jumlah proposal yang ditelaah", tgt:"1", sat:"Surat Tugas", penj:"1. Penugasan sebagai tim reviewer proposal riset di internal BRIN 2. Berlaku kelipatan per proposal", bkt:"1. Surat penugasan; dan 2. Dokumen hasil reviu", s:[1,1,null,null] },
+  { id:"ps50", kat:"Tim Reviewer", label:"Sebagai Ketua Tim Reviewer hasil Riset", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Tugas", penj:"Pelaksanaan tugas sebagai ketua tim penelaahan teknis terhadap hasil Riset", bkt:"1. Surat tugas/Surat Keputusan pejabat berwenang; dan 2. Laporan/Dokumen pengembangan", s:[25,20,null,null] },
+  { id:"ps51", kat:"Tim Reviewer", label:"Sebagai Anggota Tim Reviewer hasil Riset", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Tugas", penj:"Pelaksanaan tugas sebagai anggota tim penelaahan teknis terhadap hasil riset", bkt:"1. Surat tugas/Surat Keputusan pejabat berwenang; dan 2. Laporan/Dokumen pengembangan", s:[20,15,10,10] },
+  { id:"ps52", kat:"Kelompok Riset/ Program", label:"Sebagai Ketua Kelompok Riset/Program (Ketua Kelompok Riset, Koordinator Program, Chief Engineer, Manager Program, Group Leader )", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan sebagai ketua kelompok riset yang bertanggung jawab dalam perencanaan dan implementasi riset di Pusat Riset", bkt:"Surat Keputusan penunjukan", s:[15,15,15,15] },
+  { id:"ps53", kat:"Kelompok Riset/ Program", label:"Sebagai gugus pembantu Kelompok Riset/Program (Wakil Kelompok Riset atau Sekretaris Kelompok Riset)", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan sebagai gugus pembantu kelompok riset yang membantu dalam perencanaan dan implementasi riset di Pusat Riset", bkt:"Surat Keputusan penunjukan", s:[7.5,7.5,7.5,7.5] },
+  { id:"ps54", kat:"Pengelola Fasilitas Riset dan Inovasi/ Laborato rium", label:"Sebagai koordinator pengelola fasilitas riset dan inovasi/laboratorium", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan sebagai koordinator pengelola fasilitas riset dan inovasi/laboratorium", bkt:"Surat Keputusan penunjukan", s:[10,10,10,10] },
+  { id:"ps55", kat:"Pengelola Fasilitas Riset dan Inovasi/ Laborato rium", label:"Sebagai pelaksana pengelola fasilitas riset dan inovasi/laboratorium", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"Penugasan sebagai pelaksana pengelola fasilitas riset dan inovasi/laboratorium", bkt:"Surat Keputusan penunjukan", s:[5,5,5,5] },
+  { id:"ps56", kat:"Keanggota pada Organisasi Ilmiah", label:"Menjadi pengurus organisasi ilmiah", ind:"Jumlah penugasan", tgt:"1", sat:"Surat Keputusan", penj:"1. Peran aktif sebagai pengurus organisasi ilmiah nasional maupun internasional 2. Berlaku kelipatan per organisasi, maksimal 3 (tiga) organisasi", bkt:"Surat Keputusan penunjukan", s:[3,3,3,3] },
+  { id:"ps57", kat:"Keanggota pada Organisasi Ilmiah", label:"Menjadi anggota organisasi ilmiah", ind:"Jumlah organisasi ilmiah", tgt:"1", sat:"Surat Keputusan", penj:"1. Peran aktif sebagai anggota organisasi ilmiah nasional maupun internasional 2. Berlaku kelipatan per organisasi, maksimal 3 (tiga) organisasi", bkt:"Bukti keanggotaan", s:[1,1,1,1] },
+  { id:"ps58", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sangat Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Teknologi baru orisinal, breakthrough, belum ada sebelumnya, tingkat kebaruan sangat tinggi (invention), kompleksitas metodologi multi-disiplin, metode kompleks, pemodelan matematis, simulasi, eksperimen lengkap. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[40,40,40,40] },
+  { id:"ps59", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Pengembangan signifikan dari teknologi yang ada, tingkat kebaruan tinggi (major improvement), kompleksitas metodologi kombinasi eksperimen, desain, dan validasi. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[20,20,20,20] },
+  { id:"ps60", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sedang", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Modifikasi atau adaptasi teknologi yang sudah ada, tingkat kebaruan sedang (incremental improvement), kompleksitas metodologi eksperimen terbatas, pengujian teknis sederhana. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[15,15,15,15] },
+  { id:"ps61", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sederhana", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Penerapan langsung teknologi yang sudah mapan, tingkat kebaruan rendah (application only), kompleksitas metodologi implementasi teknis langsung.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[10,10,10,10] },
+];
+
+const OC_ITEMS = [
+  { id:"oc01", kat:"Lisensi", label:"Transaksi lisensi berbasis Kekayaan Intelektual/varietas dengan mitra internasional", ind:"Jumlah transaksi lisensi", tgt:"1", sat:"Lisensi", penj:"Perjanjian pemberian hak pemanfaatan Kekayaan Intelektual/varietas kepada pihak luar negeri dengan ketentuan tertentu, baik bersifat eksklusif maupun non- eksklusif", bkt:"Perjanjian lisensi yang sudah ditandatangani kedua belah pihak", s:[35,35,30,30] },
+  { id:"oc02", kat:"Lisensi", label:"Transaksi lisensi berbasis Kekayaan Intelektual /varietas dengan mitra nasional", ind:"Jumlah transaksi lisensi", tgt:"1", sat:"Lisensi", penj:"Perjanjian pemberian hak pemanfaatan Kekayaan Intelektual/varietas kepada mitra nasional dengan ketentuan tertentu, baik bersifat eksklusif maupun non- eksklusif", bkt:"Perjanjian lisensi yang sudah ditandatangani kedua belah pihak", s:[30,30,25,25] },
+  { id:"oc03", kat:"Pemanfaatan Varietas", label:"Pemanfaatan varietas tanaman, benih unggul tanaman hutan, rumpun atau galur hewan/ikan oleh industri termasuk Usaha Mikro Kecil Menengah (UMKM)", ind:"Jumlah industri yang memanfaatkan", tgt:"1", sat:"Industri", penj:"Penetapan dan pengesahan hasil pemuliaan atau seleksi sebagai produk yang layak diproduksi dan dimanfaatkan secara komersial oleh sektor industri", bkt:"1. Surat Keputusan Pelepasan Varietas; 2. SK atau bukti keterlibatan dalam penetapan; dan 3. Surat Keterangan Pemanfaatan dari Industri", s:[20,20,20,20] },
+  { id:"oc04", kat:"Pemanfaatan Varietas", label:"Pemanfaatan varietas tanaman, benih unggul tanaman hutan, rumpun atau galur hewan/ikan oleh Pemerintah Daerah", ind:"Jumlah pemerintah daerah yang memanfaatkan", tgt:"1", sat:"Pemerin tah Daerah", penj:"Penetapan resmi hasil pemuliaan atau seleksi yang layak diproduksi dan dimanfaatkan untuk mendukung program Pemerintah Daerah", bkt:"1. Surat Keputusan Pelepasan Varietas; 2. SK atau bukti keterlibatan dalam penetapan; dan 3. Surat Keterangan Pemanfaatan dari Pemerintah Daerah (paling rendah eselon 2)/Masyarakat", s:[15,15,15,15] },
+  { id:"oc05", kat:"Pemanfaatan Purwarupa", label:"Pemanfaatan purwarupa oleh industri", ind:"Jumlah industri yang memanfaatkan", tgt:"1", sat:"Industri", penj:"Model atau produk awal hasil riset yang telah digunakan atau diadopsi oleh industri untuk uji coba, produksi, atau komersialisasi", bkt:"1. Surat keterangan dari pihak industri; 2. Bukti hasil uji coba/penerapan purwarupa tersebut; dan 3. Surat Keputusan atau bukti keterlibatan", s:[20,20,20,20] },
+  { id:"oc06", kat:"Pemanfaatan Purwarupa", label:"Pemanfaatan purwarupa oleh Kementerian/Lembaga", ind:"Jumlah kementerian/lembaga yang memanfaatkan", tgt:"1", sat:"Lembaga", penj:"Model atau produk awal hasil riset yang telah digunakan, diuji coba, atau diterapkan oleh Kementerian/Lembaga dalam pelaksanaan tugas dan fungsi", bkt:"1. Surat keterangan dari kementerian/lembaga, paling rendah eselon 2; 2. Bukti hasil uji coba/penerapan purwarupa; dan 3. Surat Keputusan atau bukti keterlibatan", s:[20,20,20,20] },
+  { id:"oc07", kat:"Pemanfaatan Purwarupa", label:"Pemanfaatan purwarupa oleh Pemerintah Daerah", ind:"Jumlah pemerintah daerah yang memanfaatkan", tgt:"1", sat:"Pemerin tah Daerah", penj:"Model atau produk awal hasil riset yang telah digunakan, diuji coba, atau diterapkan untuk mendukung program Pemerintah Daerah", bkt:"1. Surat keterangan dari pemerintah daerah, paling rendah eselon 2; 2. Bukti hasil uji coba/penerapan purwarupa; dan 3. Surat Keputusan atau bukti keterlibatan", s:[15,15,15,15] },
+  { id:"oc08", kat:"Pemanfaatan Purwarupa", label:"Purwarupa yang dimanfaatkan oleh Perguruan Tinggi/Lembaga Riset Non- Pemerintah", ind:"Jumlah lembaga riset yang memanfaatkan", tgt:"1", sat:"Lembaga Riset", penj:"Model atau produk awal hasil riset yang telah digunakan, diuji coba, atau diterapkan untuk mendukung program daerah atau kebutuhan Perguruan Tinggi/Lembaga Riset Non-Pemerintah", bkt:"1. Surat keterangan dari Dekan/Kepala Lembaga Riset Non- Pemerintah; 2. Bukti hasil uji coba/penerapan purwarupa; dan 3. Surat Keputusan atau bukti keterlibatan.", s:[10,10,10,10] },
+  { id:"oc09", kat:"Pemanfaatan Purwarupa", label:"Purwarupa yang dimanfaatkan oleh asosiasi/organisasi profesi", ind:"Jumlah organisasi yang memanfaatkan", tgt:"1", sat:"Organisa si", penj:"Model atau produk awal hasil Riset yang telah digunakan, diuji coba, atau diterapkan oleh asosiasi/organisasi profesi", bkt:"1. Surat keterangan dari asosiasi/organisasi profesi; dan 2. Surat Keputusan atau bukti keterlibatan", s:[5,5,5,5] },
+  { id:"oc10", kat:"Pemanfaatan Naskah Kebijakan", label:"Naskah akademik Rancangan Undang-Undang yang dimanfaatkan", ind:"Jumlah naskah akademik yang dimanfaatkan", tgt:"1", sat:"Naskah Akade mik", penj:"Dokumen kajian ilmiah yang digunakan sebagai dasar penyusunan, pembahasan, atau penyempurnaan Rancangan Undang- Undang", bkt:"1. Undang-Undang yang disahkan: 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah akademik", s:[20,20,20,20] },
+  { id:"oc11", kat:"Pemanfaatan Naskah Kebijakan", label:"Naskah urgensi Rancangan Peraturan Pemerintah atau Rancangan Peraturan Presiden yang dimanfaatkan", ind:"Jumlah naskah urgensi yang dimanfaatkan", tgt:"1", sat:"Naskah Urgensi", penj:"Dokumen kajian ilmiah yang digunakan sebagai dasar penyusunan, pembahasan, atau penyempurnaan Rancangan Peraturan Pemerintah atau Rancangan Peraturan Presiden", bkt:"1. Peraturan Pmerintah atau Peraturan Presiden yang disahkan: 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah urgensi", s:[15,15,15,15] },
+  { id:"oc12", kat:"Pemanfaatan Naskah Kebijakan", label:"Naskah urgensi rancangan peraturan menteri atau badan/lembaga yang dimanfaatkan", ind:"Jumlah naskah urgensi yang dimanfaatkan", tgt:"1", sat:"Naskah Urgensi", penj:"Dokumen kajian ilmiah yang digunakan sebagai dasar penyusunan, pembahasan, atau penyempurnaan rancangan peraturan menteri atau badan/lembaga", bkt:"1. Peraturan Menteri atau Peraturan Badan/Lembaga yang disahkan: 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah urgensi", s:[10,10,10,10] },
+  { id:"oc13", kat:"Pemanfaatan Naskah Kebijakan", label:"Naskah akademik Rancangan Peraturan Daerah yang dimanfaatkan", ind:"Jumlah naskah akademik yang dimanfaatkan", tgt:"1", sat:"Naskah Akade mik", penj:"Dokumen kajian ilmiah yang digunakan sebagai dasar penyusunan, pembahasan, atau penyempurnaan Rancangan Peraturan Daerah", bkt:"1. Peraturan Daerah yang disahkan; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah akademik", s:[10,10,10,10] },
+  { id:"oc14", kat:"Pemanfaatan Rekomendasi Kebijakan", label:"Rekomendasi Kebijakan yang dimanfaatkan oleh Industri", ind:"Jumlah rekomendasi kebijakan yang dimanfaatkan", tgt:"1", sat:"Rekomen dasi Kebija kan", penj:"Rekomendasi kebijakan berbasis hasil Riset yang digunakan oleh industri sebagai dasar pengambilan keputusan atau penyusunan strategi usaha", bkt:"1. Surat keterangan dari industri; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah rekomendasi", s:[20,20,20,20] },
+  { id:"oc15", kat:"Pemanfaatan Rekomendasi Kebijakan", label:"Rekomendasi Kebijakan yang dimanfaatkan oleh Kementerian/Lembaga", ind:"Jumlah rekomendasi kebijakan yang dimanfaatkan", tgt:"1", sat:"Rekomen dasi Kebija kan", penj:"Rekomendasi kebijakan berbasis hasil Riset yang digunakan oleh kementerian/lembaga sebagai dasar penyusunan, perumusan, evaluasi, atau penyempurnaan kebijakan, program, dan regulasi nasional", bkt:"1. Surat permintaan dari kementerian/lembaga atau surat keterangan dari kementerian/lembaga, paling rendah eselon 2; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah rekomendasi", s:[20,20,20,20] },
+  { id:"oc16", kat:"Pemanfaatan Rekomendasi Kebijakan", label:"Rekomendasi Kebijakan yang dimanfaatkan oleh Pemerintah Daerah", ind:"Jumlah rekomendasi kebijakan yang dimanfaatkan", tgt:"1", sat:"Rekomen dasi Kebija kan", penj:"Rekomendasi kebijakan berbasis hasil Riset yang digunakan oleh Pemerintah Daerah sebagai dasar perumusan kebijakan daerah, penyusunan program pembangunan, atau pengambilan keputusan strategis di tingkat daerah", bkt:"1. Surat Permintaan dari Pemerintah Daerah/Surat keterangan dari Pemerintah Daerah, paling rendah eselon 2; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah rekomendasi", s:[15,15,15,15] },
+  { id:"oc17", kat:"Pemanfaatan Rekomendasi Kebijakan", label:"Rekomendasi Kebijakan yang dimanfaatkan oleh unit kerja internal BRIN", ind:"Jumlah rekomendasi kebijakan yang dimanfaatkan", tgt:"1", sat:"Rekomen dasi Kebija kan", penj:"1. Rekomendasi kebijakan berbasis hasil riset yang digunakan oleh unit kerja internal BRIN sebagai dasar perumusan kebijakan internal BRIN 2. Tidak menjadi anggota tim penyusun rekomendasi kebijakan pada Deputi Bidang Kebijakan Pembangunan", bkt:"1. Surat keterangan dari unit kerja eselon 2; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Naskah rekomendasi", s:[5,5,5,5] },
+  { id:"oc18", kat:"Pemanfaatan Teknologi/ Produk Riset", label:"Teknologi/Produk Riset yang dimanfaatkan oleh industri", ind:"Jumlah industri yang memanfaatkan", tgt:"1", sat:"Industri", penj:"Hasil riset berupa metode, sistem, desain, proses, perangkat, atau aplikasi teknologi yang telah diterapkan dan digunakan oleh pelaku industri untuk mendukung produksi, meningkatkan efisiensi, mutu, inovasi produk, atau pengembangan usaha", bkt:"1. Surat keterangan dari industri; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti Teknologi", s:[20,20,20,20] },
+  { id:"oc19", kat:"Pemanfaatan Teknologi/ Produk Riset", label:"Teknologi/Produk Riset yang dimanfaatkan oleh Kementerian/Lembaga", ind:"Jumlah kementerian/lembaga yang memanfaatkan", tgt:"1", sat:"Lembaga", penj:"Hasil riset berupa metode, sistem, desain, proses, perangkat, atau aplikasi teknologi yang telah diterapkan dan digunakan oleh kementerian/lembaga dalam pelaksanaan tugas, fungsi, layanan publik, atau penyusunan kebijakan", bkt:"1. Surat keterangan dari kementerian/lembaga; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti Teknologi", s:[20,20,20,20] },
+  { id:"oc20", kat:"Pemanfaatan Teknologi/ Produk Riset", label:"Teknologi/Produk Riset yang dimanfaatkan oleh Pemerintah Daerah", ind:"Jumlah pemerintah daerah yang memanfaatkan", tgt:"1", sat:"Pemerin tah Daerah", penj:"Hasil riset berupa metode, sistem, desain, proses, perangkat, atau aplikasi teknologi yang telah diterapkan dan digunakan oleh Pemerintah Daerah dalam penyelenggaraan pemerintahan daerah, pelayanan publik, atau pembangunan daerah", bkt:"1. Surat keterangan dari Pemerintah Daerah; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti Teknologi", s:[15,15,15,15] },
+  { id:"oc21", kat:"Teknologi/ Produk Riset", label:"Teknologi/Produk Riset yang dimanfaatkan oleh Perguruan Tinggi", ind:"Jumlah lembaga Riset yang memanfaatkan", tgt:"1", sat:"Lembaga Riset", penj:"Hasil riset berupa metode, sistem, desain, proses, perangkat, atau aplikasi teknologi yang telah diterapkan dan digunakan oleh Perguruan Tinggi", bkt:"1. Surat keterangan dari Dekan; 2. Surat Keputusan atau bukti keterlibatan; 3. Bukti Teknologi; dan 4. Bukti Pemanfaatan", s:[5,5,5,5] },
+  { id:"oc22", kat:"Pemanfaatan Teknologi/ Produk Riset", label:"Teknologi/Produk Riset yang dimanfaatkan oleh asosiasi/organisasi profesi", ind:"Jumlah organisasi yang memanfaatkan", tgt:"1", sat:"Organi sasi", penj:"Hasil riset berupa metode, sistem, desain, proses, perangkat, atau aplikasi teknologi yang telah diterapkan dan digunakan oleh asosiasi/organisasi profesi", bkt:"1. Surat keterangan dari pengguna; 2. Surat Keputusan /Surat Tugas atau bukti keterlibatan; dan 3. Bukti Teknologi", s:[5,5,5,5] },
+  { id:"oc23", kat:"Pemanfaatan Dokumen Standardi sasi", label:"Laporan Analisis Keselamatan (LAK) Nuklir yang dimanfaatkan oleh Industri", ind:"Jumlah LAK Nuklir yang dimanfaatkan", tgt:"1", sat:"Laporan", penj:"1. Memuat analsis keselamatan tentang simulasi semua kejadian dan kecelakaan yang mungkin akan terjadi dari suatu kegiatan ketenaganukliran, termasuk simulasi pencegahan, mitigasi dan penanggulangan terhadap risiko dan konsekuensinya 2. Laporan Analisis Keselamatan mencakup aspek 3S ( Safety, Security dan Safeguard ) Ketenaganukliran 3. Laporan Analisis Keselamatn (LAK) Nuklir yang dimanfaatkan merupakan hasil Riset yang dimiliki oleh periset BRIN", bkt:"1. Surat keterangan dari Industri; dan 2. Sertifikat keselamatan atau Standar Operasional Prosedur (SOP) yang ditetapkan oleh perusahaan sesuai LAK", s:[20,20,20,20] },
+  { id:"oc24", kat:"Pemanfaatan Dokumen Standardi sasi", label:"Laporan Analisis Keselamatan (LAK) Nuklir yang dimanfaatkan oleh Kementerian/Lembaga", ind:"Jumlah industri yang memanfaatkan", tgt:"1", sat:"Industri", penj:"1. Memuat analsis keselamatan tentang simulasi semua kejadian dan kecelakaan yang mungkin akan terjadi dari suatu kegiatan ketenaganukliran, termasuk simulasi pencegahan, mitigasi dan penanggulangan terhadap risiko dan konsekuensinya; 2. Laporan Analisis Keselamatan mencakup aspek 3S ( Safety, Security dan Safeguard ) Ketenaganukliran 3. Laporan Analisis Keselamatn (LAK) Nuklir yang dimanfaatkan merupakan hasil Riset yang dimiliki oleh periset BRIN", bkt:"1. Surat keterangan dari Kementerian/Lembaga; dan 2. Sertifikat keselamatan atau Standar Operasional Prosedur (SOP) yang ditetapkan oleh perusahaan sesuai LAK;", s:[20,20,20,20] },
+  { id:"oc25", kat:"Pemanfaatan Dokumen", label:"Dokumen Modul pelatihan berbasis riset", ind:"Jumlah lembaga yang memanfaatkan", tgt:"1", sat:"Lembaga", penj:"Hasil riset berupa modul pelatihan berbasis riset atau aplikasi teknologi yang telah diterapkan dan digunakan oleh Industri/Pemerintah Daerah/Organisasi Profesi dalam peningkatan kompetensi, pelayanan publik, atau pembangunan daerah", bkt:"1. Surat keterangan dari penerima manfaat; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti Modul Pelatihan, bukti pemanfaatan", s:[5,5,5,5] },
+  { id:"oc26", kat:"Pemanfaatan Audit Teknologi", label:"Rekomendasi audit teknologi yang dimanfaatkan oleh industri", ind:"Jumlah industri yang memanfaatkan", tgt:"1", sat:"Industri", penj:"Rekomendasi hasil audit teknologi yang dimanfaatkan oleh industri", bkt:"1. Surat keterangan industri; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Laporan audit teknologi", s:[20,20,20,20] },
+  { id:"oc27", kat:"Pemanfaatan Audit Teknologi", label:"Rekomendasi audit teknologi yang dimanfaatkan oleh kementerian/lembaga", ind:"Jumlah kementerian/lembaga yang memanfaatkan", tgt:"1", sat:"Lembaga", penj:"Rekomendasi hasil audit teknologi yang dimanfaatkan oleh Kementerian/Lembaga", bkt:"1. Surat keterangan kementerian/lembaga; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Laporan audit teknologi", s:[15,15,15,15] },
+  { id:"oc28", kat:"Pemanfaatan Dataset", label:"Dataset yang dimanfaatkan oleh industri", ind:"Jumlah dataset yang dimanfaatkan", tgt:"1", sat:"Dataset", penj:"1. Kumpulan data hasil riset (termasuk citra satelit), pengamatan, pengukuran, atau pengolahan yang telah digunakan oleh pelaku industri sebagai dasar analisis, pengambilan keputusan, pengembangan produk, peningkatan efisiensi, atau strategi usaha; 2. Dataset yang dimanfaatkan telah terdata di RIN (Repositori Ilmiah Nasional); 3. Dataset yang dimanfaatkan merupakan hasil Riset yang dimiliki oleh periset BRIN 4. Tidak berlaku multiyears", bkt:"1. Surat keterangan dari industri; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti Dataset", s:[20,20,20,20] },
+  { id:"oc29", kat:"Pemanfaatan Dataset", label:"Dataset yang dimanfaatkan oleh Kementerian/Lembaga", ind:"Jumlah dataset yang dimanfaatkan", tgt:"1", sat:"Dataset", penj:"1. Kumpulan data hasil riset (termasuk citra satelit), pengamatan, pengukuran, atau pengolahan yang telah digunakan oleh Kementerian/Lembaga sebagai dasar penyusunan kebijakan, perencanaan program, evaluasi, atau pelaksanaan tugas dan fungsi 2. Dataset yang dimanfaatkan telah terdata di RIN (Repositori Ilmiah Nasional) 3. Dataset yang dimanfaatkan merupakan hasil Riset yang dimiliki oleh periset BRIN 4. Tidak berlaku multiyears", bkt:"1. Surat keterangan dari Kementerian/Lembaga; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti Dataset", s:[15,15,15,15] },
+  { id:"oc30", kat:"Pemanfaatan Dataset", label:"Dataset yang dimanfaatkan oleh Pemerintah Daerah", ind:"Jumlah dataset yang dimanfaatkan", tgt:"1", sat:"Dataset", penj:"1. Kumpulan data hasil riset (termasuk citra satelit), pengamatan, pengukuran, atau pengolahan yang telah digunakan oleh Pemerintah Daerah atau masyarakat sebagai dasar perencanaan pembangunan, pengambilan keputusan, pemberdayaan, atau kegiatan sosial- ekonomi 2. Dataset yang dimanfaatkan telah terdata di RIN (Repositori Ilmiah Nasional) 3. Dataset yang dimanfaatkan merupakan hasil Riset yang dimiliki oleh periset BRIN 4. Tidak berlaku multiyears", bkt:"1. Surat keterangan dari Pemerintah Daerah; 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti dataset", s:[10,10,10,10] },
+  { id:"oc31", kat:"Pemanfaatan Dataset", label:"Dataset yang dimanfaatkan oleh unit kerja internal BRIN/Perguruan tinggi", ind:"Jumlah dataset yang dimanfaatkan", tgt:"1", sat:"Dataset", penj:"1. Kumpulan data hasil riset (termasuk citra satelit), pengamatan, pengukuran, atau pengolahan yang telah digunakan oleh periset BRIN atau Perguruan Tinggi sebagai dasar pelaksanaan penelitian, publikasi ilmiah, pengembangan model, atau inovasi lanjutan 2. Dataset yang dimanfaatkan telah terdata di RIN (Repositori Ilmiah Nasional) 3. Dataset yang dimanfaatkan merupakan hasil riset yang dimiliki oleh periset BRIN 4. Tidak berlaku multiyears", bkt:"1. Surat keterangan dari Direktorat Repositori, Multimedia, dan Penerbitan Ilmiah atau Pusat Data dan Informasi (jika dimanfaatkan internal BRIN) atau surat keterangan dari Perguruan tinggi (jika dimanfaatkan perguruan tinggi); 2. Surat Keputusan atau bukti keterlibatan; dan 3. Bukti dataset", s:[5,5,5,5] },
+  { id:"oc32", kat:"Pemanfaatan Dataset", label:"Dataset yang dimanfaatkan secara nasional dan global", ind:"Jumlah dataset yang dimanfaatkan", tgt:"1", sat:"Dataset", penj:"1. Kumpulan data hasil riset (termasuk citra satelit), pengamatan, pengukuran, atau pengolahan yang telah digunakan dalam lingkup nasional dan internasional 2. Dataset yang dimanfaatkan telah terdata di platform global 3. Dataset yang dimanfaatkan merupakan hasil riset yang dimiliki oleh periset BRIN 4. Tidak berlaku multiyears", bkt:"1. Surat keterangan yang diverifikasi Kepala Organisasi Riset 2. Bukti terdaftar dan akesi number di platform genome global seperti GISAID, NCBI; dan 3. Bukti dataset", s:[5,5,5,5] },
+  { id:"oc33", kat:"Pemanfaatan Publikasi", label:"Pemanfaatan publikasi oleh periset lain dalam bentuk sitasi pada Scopus/WOS/SAGE", ind:"Jumlah sitasi", tgt:"10", sat:"Sitasi", penj:"1. Penggunaan publikasi ilmiah hasil riset yang dibuktikan dengan pengutipan (sitasi) oleh periset lain dalam karya ilmiah, sebagai bentuk pengakuan, rujukan konseptual, metodologis, atau empiris dalam pengembangan penelitian selanjutnya 2. Penggunaan publikasi ilmiah hasil riset yang dibuktikan dengan pengutipan (sitasi) oleh dokumen kebijakan. Berikut definisi kebijakan dokumen menurut SAGE: Dokumen kebijakan didefinisikan secara luas sebagai dokumen yang ditulis terutama untuk atau oleh pembuat kebijakan dan diterbitkan oleh sumber yang berfokus pada kebijakan. SAGE mengumpulkan dokumen kebijakan dari pemerintah dan badan resmi, tetapi juga dari organisasi antar pemerintah (IGO), beberapa Lembaga Swadaya Masyarakat (NGO), dan lembaga think tank . 3. Sitasi scopus/WOS/SAGE lebih dari 10 (sepuluh) per tahun", bkt:"Bukti sitasi dari laman Scopus IndeX atau WOS", s:[5,5,5,5] },
+  { id:"oc34", kat:"Pemanfaatan Publikasi", label:"Pemanfaatan publikasi oleh periset lain dalam bentuk sitasi selain Scopus/WOS", ind:"Jumlah sitasi", tgt:"10", sat:"Sitasi", penj:"1. Penggunaan publikasi ilmiah hasil riset yang dibuktikan dengan pengutipan (sitasi) oleh periset lain dalam karya ilmiah, sebagai bentuk pengakuan, rujukan konseptual, metodologis, atau empiris dalam pengembangan riset selanjutnya 2. Sitasi selain Scopus/WOS lebih dari 10 (sepuluh) per tahun", bkt:"Bukti sitasi dari laman selain Scopus/WOS", s:[2.5,2.5,2.5,2.5] },
+  { id:"oc35", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sangat Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Teknologi baru orisinal, breakthrough, belum ada sebelumnya, tingkat kebaruan sangat tinggi (invention), kompleksitas metodologi multi-disiplin, metode kompleks, pemodelan matematis, simulasi, eksperimen lengkap. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[40,40,40,40] },
+  { id:"oc36", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Pengembangan signifikan dari teknologi yang ada, tingkat kebaruan tinggi (major improvement), kompleksitas metodologi kombinasi eksperimen, desain, dan validasi. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[20,20,20,20] },
+  { id:"oc37", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sedang", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Modifikasi atau adaptasi teknologi yang sudah ada, tingkat kebaruan sedang (incremental improvement), kompleksitas metodologi eksperimen terbatas, pengujian teknis sederhana. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[15,15,15,15] },
+  { id:"oc38", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sederhana", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Penerapan langsung teknologi yang sudah mapan, tingkat kebaruan rendah (application only), kompleksitas metodologi implementasi teknis langsung.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[10,10,10,10] },
+];
+
+const OP_ITEMS = [
+  { id:"op01", kat:"Jurnal", label:"Karya tulis ilmiah (KTI) yang dipublikasikan pada jurnal ilmiah global bereputasi tinggi", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"1. Karya tulis ilmiah yang dipublikasikan pada jurnal ilmiah internasional yang terindeks pada basis data bereputasi global (misalnya Scopus atau Web of Science ) dan berada pada kuartil pertama (Q1) atau bereputasi tinggi menurut reputasi publikasi BRIN 2. Nilai KTI dengan status accepted adalah 80% (delapan puluh persen) dari nilai hasil kerja 3. Nilai KTI dengan status review adalah 40% (empat puluh persen) dari nilai hasil kerja 4. Nilai KTI dengan status submit adalah 2 (dua)", bkt:"Bukti publikasi dan link publikasi", s:[40,45,50,55] },
+  { id:"op02", kat:"Jurnal", label:"Karya tulis ilmiah (KTI) yang dipublikasikan pada jurnal ilmiah global bereputasi menengah", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"1. KTI yang dipublikasikan jurnal ilmiah internasional yang terindeks pada basis data bereputasi global dan berada pada kuartil kedua (Q2) atau bereputasi menengah menurut reputasi publikasi BRIN 2. Nilai KTI dengan status accepted adalah 80% (delapan puluh persen) dari nilai hasil kerja 3. Nilai KTI dengan status review adalah 40% (empat puluh persen) dari nilai hasil kerja 4. Nilai KTI dengan status submit adalah 2 (dua)", bkt:"Bukti publikasi dan link publikasi", s:[20,40,45,50] },
+  { id:"op03", kat:"Jurnal", label:"Karya tulis ilmiah (KTI) yang dipublikasikan pada Jurnal ilmiah global bereputasi", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"1. KTI yang dipublikasikan jurnal ilmiah internasional yang terindeks pada basis data bereputasi global dan berada pada kuartil ketiga (Q3) atau bereputasi global menurut reputasi publikasi BRIN 2. Nilai KTI dengan status accepted adalah 80% (delapan puluh persen) dari nilai hasil kerja 3. Nilai KTI dengan status review adalah 40% (empat puluh persen) dari nilai hasil kerja 4. Nilai KTI dengan status submit adalah 2 (dua)", bkt:"Bukti publikasi dan link publikasi", s:[15,20,40,45] },
+  { id:"op04", kat:"Jurnal", label:"Karya tulis ilmiah (KTI) yang dipublikasikan pada Jurnal ilmiah global lainnya", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"1. Karya tulis ilmiah yang dipublikasikan jurnal ilmiah internasional yang terindeks pada basis data bereputasi global lainnya dan berada pada kuartil keempat (Q4), atau bereputasi global lainnya menurut reputasi publikasi BRIN 2. Nilai KTI dengan status accepted adalah 80% (delapan puluh persen) dari nilai hasil kerja 3. Nilai KTI dengan status review adalah 40% (empat puluh persen) dari nilai hasil kerja 4. Nilai KTI dengan status submit adalah 2 (dua)", bkt:"Bukti publikasi dan link publikasi", s:[10,15,20,40] },
+  { id:"op05", kat:"Jurnal", label:"Karya tulis ilmiah (KTI) yang dipublikasikan dalam Jurnal terakreditasi nasional SINTA 1", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"1. Karya tulis ilmiah yang dipublikasikan pada jurnal ilmiah nasional yang telah terakreditasi pada peringkat SINTA 1 berdasarkan sistem akreditasi jurnal nasional yang dikelola oleh Kementerian Pendidikan Tinggi, Sains, dan Teknologi 2. Nilai KTI dengan status yang sudah accepted adalah 80% (delapan puluh persen) dari nilai hasil kerja 3. Nilai KTI dengan status yang sudah review adalah 40% (empat puluh persen) dari nilai hasil kerja 4. Nilai KTI dengan status submit adalah 0,5 (nol koma lima)", bkt:"Bukti publikasi dan link publikasi", s:[5,10,15,20] },
+  { id:"op06", kat:"Jurnal", label:"Karya tulis ilmiah (KTI) yang dipublikasikan dalam Jurnal terakreditasi nasional SINTA 2", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"1. Karya tulis ilmiah yang dipublikasikan pada jurnal ilmiah nasional yang telah terakreditasi pada peringkat SINTA 2 berdasarkan sistem akreditasi jurnal nasional yang dikelola oleh Kementerian Pendidikan Tinggi, Sains, dan Teknologi 2. Nilai KTI dengan status yang sudah accepted adalah 80% (delapan puluh persen) dari nilai hasil kerja 3. Nilai KTI dengan status yang sudah review adalah 40% (empat puluh persen) dari nilai hasil kerja 4. Nilai KTI dengan status submit adalah 0,5 (nol koma lima)", bkt:"Bukti publikasi dan link publikasi", s:[3,5,10,15] },
+  { id:"op07", kat:"Jurnal", label:"Karya tulis ilmiah ( KTI) yang dipublikasikan dalam Jurnal terakreditasi nasional SINTA 3", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"1. Karya tulis ilmiah yang dipublikasikan pada jurnal ilmiah nasional yang telah terakreditasi pada peringkat SINTA 3 berdasarkan sistem akreditasi jurnal nasional yang dikelola oleh Kementerian Pendidikan Tinggi, Sains, dan Teknologi 2. Nilai KTI dengan status yang sudah accepted adalah 80% (delapan puluh persen) dari nilai hasil kerja 3. Nilai KTI dengan status yang sudah review adalah 40% (empat puluh persen) dari nilai hasil kerja 4. Nilai KTI dengan status submit adalah 0,5 (nol koma lima)", bkt:"Bukti publikasi dan link publikasi", s:[2,3,5,10] },
+  { id:"op08", kat:"Buku", label:"Buku atau Bagian dari buku ilmiah yang diterbitkan oleh penerbit internasional bereputasi", ind:"Jumlah buku atau bagian dari buku ilmiah", tgt:"1", sat:"Buku", penj:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit internasional yang terindeks menurut reputasi publikasi BRIN atau pangkalan data buku ilmiah Scopus dan/atau WoS", bkt:"Bukti publikasi dan link publikasi", s:[40,45,50,55] },
+  { id:"op09", kat:"Buku", label:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit internasional lainnya", ind:"Jumlah buku atau bagian dari buku ilmiah", tgt:"1", sat:"Buku", penj:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit internasional yang tidak terindeks menurut reputasi publikasi BRIN atau Penerbit buku ilmiah yang berdomisili di luar negeri atau dalam negeri yang terbitannya menggunakan Bahasa Inggris", bkt:"Bukti publikasi dan link publikasi", s:[25,45,50,55] },
+  { id:"op10", kat:"Buku", label:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit ilmiah nasional terakreditasi", ind:"Jumlah buku atau bagian dari buku ilmiah", tgt:"1", sat:"Buku", penj:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit nasional yang terakreditasi Lembaga Akreditasi Penerbit Ilmiah (LAPI)", bkt:"Bukti publikasi dan link publikasi", s:[15,20,25,30] },
+  { id:"op11", kat:"Buku", label:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit nasional", ind:"Jumlah buku atau bagian dari buku ilmiah", tgt:"1", sat:"Buku", penj:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit nasional yang menjadi anggota IKAPI", bkt:"Bukti publikasi dan link publikasi", s:[10,15,20,25] },
+  { id:"op12", kat:"Buku", label:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit nasional lainnya", ind:"Jumlah buku atau bagian dari buku ilmiah", tgt:"1", sat:"Buku", penj:"Buku atau bagian dari buku ilmiah yang diterbitkan oleh penerbit nasional lainnya", bkt:"Bukti publikasi dan link publikasi", s:[5,10,15,20] },
+  { id:"op13", kat:"Prosiding", label:"Karya tulis ilmiah (KTI) yang dipublikasikan dalam Prosiding Global Bereputasi", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"Artikel ilmiah yang dipublikasikan dalam prosiding konferensi internasional dan terindeks pada basis data bereputasi global (misalnya Scopus atau Web of Science ), serta melalui proses seleksi dan penelaahan ilmiah ( peer review )", bkt:"Bukti publikasi dan link publikasi", s:[5,10,15,20] },
+  { id:"op14", kat:"Prosiding", label:"Karya tulis ilmiah (KTI) yang dipublikasikan dalam Prosiding Global", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"Artikel ilmiah yang dipublikasikan dalam prosiding konferensi internasional", bkt:"Bukti publikasi dan link publikasi", s:[3,5,7,10] },
+  { id:"op15", kat:"Prosiding", label:"Karya tulis ilmiah (KTI) yang dipublikasikan dalam Prosiding Nasional", ind:"Jumlah KTI", tgt:"1", sat:"KTI", penj:"Artikel ilmiah yang dipublikasikan dalam prosiding seminar atau konferensi tingkat nasional yang memiliki proses seleksi dan/atau penelaahan ilmiah", bkt:"Bukti publikasi dan link publikasi", s:[2,4,6,8] },
+  { id:"op16", kat:"Buku", label:"Draft Naskah Orasi Jumlah", ind:"rancangan naskah orasi", tgt:"1", sat:"Naskah", penj:"Draft naskah yang akan dipublikasikan dalam rangka pengukuhan profesor riset", bkt:"Bukti Draft Naskah Orasi yang dihasilkan", s:[2,null,null,null] },
+  { id:"op17", kat:"Buku", label:"Buku Ajar yang diterbitkan dalam media cetak atau elektronik", ind:"Jumlah buku ajar yang diterbitkan", tgt:"1", sat:"Buku", penj:"1. Buku yang berfungsi sebagai pegangan dalam proses pembelajaran pada bidang tertentu. Diterbitkan dalam bentuk cetak dan/atau elektronik oleh penerbit maupun non penerbit 2. Memiliki ISBN", bkt:"Bukti publikasi dan link publikasi", s:[2,2,2,2] },
+  { id:"op18", kat:"Artikel Ilmiah Artikel ilmiah", label:"populer yang diterbitkan pada media massa terpercaya", ind:"Jumlah artikel ilmiah populer yang diterbitkan", tgt:"1", sat:"Artikel", penj:"Artikel yang menyajikan temuan atau kajian ilmiah yang diterbitkan pada media massa terpercaya", bkt:"Bukti artikel dan link artikel", s:[1,1,1,1] },
+  { id:"op19", kat:"Kekayaan Intelektual (KI)", label:"KI yang telah dikabulkan dalam bentuk paten internasional", ind:"Jumlah KI", tgt:"1", sat:"KI", penj:"KI atas invensi yang telah memperoleh status granted /paten dikabulkan melalui mekanisme perlindungan internasional sesuai ketentuan perjanjian atau sistem paten internasional yang berlaku", bkt:"Sertifikat KI yang dimaksud", s:[40,45,50,55] },
+  { id:"op20", kat:"Kekayaan Intelektual (KI)", label:"KI yang telah dikabulkan dalam bentuk paten nasional", ind:"Jumlah KI", tgt:"1", sat:"KI", penj:"KI atas invensi yang telah memperoleh status granted /paten dikabulkan melalui mekanisme perlindungan nasional sesuai ketentuan perjanjian", bkt:"1. Sertifikat Paten; 2. Surat Keputusan Pemberian Paten; dan 3. Halaman data paten dari website Direktorat Jenderal Kekayaan Intelektual", s:[35,40,45,50] },
+  { id:"op21", kat:"Kekayaan Intelektual (KI)", label:"KI terdaftar dalam bentuk paten internasional", ind:"Jumlah KI", tgt:"1", sat:"KI", penj:"KI atas invensi yang telah didaftarkan melalui mekanisme pendaftaran paten internasional (misalnya melalui Patent Cooperation Treaty /PCT atau kantor paten regional/internasional), dan telah memperoleh status terdaftar ( published/registered )", bkt:"1. Bukti pendaftaran paten internasional; 2. Halaman publikasi dari WIPO; dan 3. Bukti tanggal pendaftaran", s:[30,35,40,45] },
+  { id:"op22", kat:"Kekayaan Intelektual (KI)", label:"KI terdaftar dalam bentuk paten nasional", ind:"Jumlah KI", tgt:"1", sat:"KI", penj:"KI atas invensi yang telah diajukan dan tercatat secara resmi pada Direktorat Jenderal Kekayaan Intelektual (DJKI) atau kantor paten nasional, serta telah memperoleh status terdaftar ( filing /tercatat)", bkt:"1. Surat Tanda Terima Permohonan Paten; 2. Bukti filing paten; dan 3. Halaman status paten dari Direktorat Jenderal Kekayaan Intelektual (DJKI)", s:[25,30,35,40] },
+  { id:"op23", kat:"Kekayaan Intelektual (KI)", label:"KI yang telah dikabulkan dalam bentuk paten sederhana", ind:"Jumlah KI", tgt:"1", sat:"KI", penj:"KI atas invensi yang telah memperoleh status granted/paten dikabulkan melalui mekanisme perlindungan nasional sesuai ketentuan yang berlaku", bkt:"1. Sertifikat Paten; 2. Surat Keputusan Pemberian Paten; dan 3. Halaman data paten dari website Direktorat Jenderal Kekayaan Intelektual (DJKI)", s:[25,30,35,40] },
+  { id:"op24", kat:"Kekayaan Intelektual (KI)", label:"KI dalam bentuk paten sederhana terdaftar", ind:"Jumlah KI", tgt:"1", sat:"KI", penj:"KI yang telah terdaftar atau memperoleh pengakuan resmi dari otoritas berwenang, termasuk paten sederhana dengan status terdaftar", bkt:"Bukti pendaftaran KI yang dimaksud", s:[15,20,25,30] },
+  { id:"op25", kat:"Kekayaan Intelektual (KI)", label:"Hak cipta dalam bentuk perangkat lunak/algoritma, desain industri, dataset, desain, peta, model, aplikasi, tata letak sirkuit terpadu serta hak cipta lainya yang merupakan hasil kegiatan riset", ind:"Jumlah hak cipta", tgt:"1", sat:"Hak Cipta", penj:"Bentuk KI yang memberikan perlindungan hukum atas karya cipta atau desain, termasuk perangkat lunak/algoritma, desain industri, dataset, peta, model, aplikasi, sdesain dan tata letak sirkuit terpadu, serta hak cipta lainya yang merupakan hasil kegiatan riset, sudah terverifikasi, dan sesuai ketentuan peraturan perundang- undangan yang berlaku", bkt:"Sertifikat KI yang dimaksud", s:[10,15,20,25] },
+  { id:"op26", kat:"Varietas", label:"Pelepasan varietas tanaman nasional atau benih unggul tanaman hutan yang dikabulkan", ind:"Jumlah pelepasan varietas", tgt:"1", sat:"Varietas", penj:"Varietas tanaman atau benih unggul tanaman hutan hasil riset dan pemuliaan yang telah memperoleh keputusan pelepasan resmi dari instansi berwenang di tingkat nasional sehingga dapat diproduksi dan/atau diedarkan secara legal", bkt:"Sertifikat atau bukti pengakuan resmi", s:[40,45,50,55] },
+  { id:"op27", kat:"Varietas", label:"Perlindungan varietas tanaman nasional", ind:"Jumlah perlindungan varietas tanaman", tgt:"1", sat:"Sertifikat PVT", penj:"Varietas tanaman atau benih unggul tanaman hutan hasil riset dan pemuliaan yang telah memperoleh perlindungan varietas resmi dari instansi berwenang di tingkat nasional sehingga dapat diproduksi dan/atau diedarkan secara legal", bkt:"Sertifikat atau bukti pengakuan resmi", s:[35,40,45,50] },
+  { id:"op28", kat:"Varietas", label:"Varietas Tanaman Terdaftar Hasil Pemuliaan/Lokal", ind:"Jumlah varietas terdaftar", tgt:"1", sat:"Varietas", penj:"Varietas tanaman yang telah tercatat secara resmi dalam daftar varietas pada instansi berwenang, namun belum tentu memperoleh status pelepasan nasional atau perlindungan hak varietas", bkt:"Sertifikat Tanda Daftar", s:[30,35,40,45] },
+  { id:"op29", kat:"Rumpun atau Galur", label:"Pelepasan rumpun atau galur hewan/ikan", ind:"Jumlah pelepasan rumpun atau galur hewan/ikan", tgt:"1", sat:"Varietas", penj:"Rumpun atau galur hewan/ikan hasil riset, pemuliaan, atau seleksi yang telah memperoleh keputusan resmi pelepasan dari instansi berwenang sehingga dapat dikembangkan, diproduksi, dan/atau diedarkan secara legal", bkt:"Sertifikat atau bukti pengakuan resmi", s:[40,45,50,55] },
+  { id:"op30", kat:"Rumpun atau Galur", label:"Penetapan rumpun atau galur hewan", ind:"Jumlah rumpun atau galur hewan/ikan yang ditetapkan", tgt:"1", sat:"Galur", penj:"Rumpun atau galur hewan yang telah memperoleh pengakuan atau penetapan resmi dari instansi berwenang berdasarkan karakteristik genetik, fenotipik, dan/atau asal-usul yang terdokumentasi", bkt:"Sertifikat atau bukti penetapan resmi", s:[35,40,45,50] },
+  { id:"op31", kat:"Obat", label:"Produk Vaksin/Obat yang telah diuji dan digunakan", ind:"Jumlah produk vaksin/obat", tgt:"1", sat:"Vaksin/ Obat", penj:"Vaksin/Obat hasil Riset yang telah diuji dan digunakan untuk pencegahan atau pengobatan penyakit", bkt:"Sertifikat/hasil uji vaksin", s:[40,45,50,55] },
+  { id:"op32", kat:"Obat", label:"Senyawa bahan alam/sintetis yang telah diuji dan digunakan", ind:"Jumlah senyawa bahan alam/sintetis", tgt:"1", sat:"Bahan/ Materi", penj:"Senyawa bahan alam/sintetis hasil riset yang telah diuji dan digunakan untuk pencegahan atau pengeobatan penyakit", bkt:"Sertifikat/hasil uji senyawa bahan alam/sintetis", s:[35,35,35,35] },
+  { id:"op33", kat:"Naskah Kebijakan", label:"Naskah Akademik yang telah disusun sesuai kebutuhan instansi terkait", ind:"Jumlah naskah akademik", tgt:"1", sat:"Naskah", penj:"Dokumen ilmiah yang menjadi dasar penyusunan suatu rancangan peraturan perundang-undangan, yang disusun secara sistematis berdasarkan hasil penelitian, kajian teoritis, analisis empiris, serta evaluasi regulasi yang berlaku", bkt:"1. Naskah akademik; 2. Surat Keputusan Penugasan/ bukti keterlibatan; dan 3. Surat Keterangan penerimaan dari instansi terkait", s:[5,10,15,25] },
+  { id:"op34", kat:"Naskah Kebijakan", label:"Naskah Urgensi yang telah disusun sesuai kebutuhan instansi terkait", ind:"Jumlah naskah urgensi", tgt:"1", sat:"Naskah", penj:"Dokumen ilmiah yang menjelaskan alasan mendesak (urgensi) perlunya suatu kebijakan atau regulasi dibentuk, diubah, atau dicabut", bkt:"1. Naskah urgensi; 2. Surat Keputusan Penugasan/bukti keterlibatan; dan 3. Surat Keterangan penerimaan dari instansi terkait", s:[3,5,7,10] },
+  { id:"op35", kat:"Naskah Kebijakan", label:"Policy Brief yang telah disusun sesuai kebutuhan instansi terkait", ind:"Jumlah dokumen kebijakan", tgt:"1", sat:"Naskah", penj:"Dokumen ringkas dan terfokus yang merangkum isu kebijakan tertentu, menyajikan temuan utama serta rekomendasi praktis secara singkat dan langsung kepada pengambil keputusan", bkt:"1. Policy paper; dan 2. Surat Keputusan Penugasan/bukti keterlibatan", s:[2,5,7,10] },
+  { id:"op36", kat:"Naskah Kebijakan", label:"Policy Paper yang telah disusun sesuai kebutuhan instansi terkait", ind:"Jumlah dokumen kebijakan", tgt:"1", sat:"Naskah", penj:"Dokumen analisis kebijakan yang komprehensif dan berbasis bukti ilmiah, berisi kajian mendalam mengenai suatu isu strategis, evaluasi opsi kebijakan, serta rekomendasi yang ditujukan kepada pengambil keputusan", bkt:"1. Policy paper; dan 2. Surat Keputusan Penugasan/bukti keterlibatan", s:[2,5,7,10] },
+  { id:"op37", kat:"Dokumen hasil Riset Contoh: Program dokumen DED ( Detail Engineering Design ) FEED ( Front End Engineering Design ) Laporan Analisis Keselamatan (LAK) Rancang bangun Uji kinerja Dokumen prosedu Standardi sasi Model Purwarupa Dataset Dokumen lainnya berdasarkan telaah Kepala Pusat/Organi sasi riset Library", label:"Dokumen Riset Kompleksitas Sangat Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Teknologi baru orisinal, breakthrough, belum ada sebelumnya, tingkat kebaruan sangat tinggi (invention), kompleksitas metodologi multi-disiplin, metode kompleks, pemodelan matematis, simulasi, eksperimen lengkap. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[40,40,40,40] },
+  { id:"op38", kat:"Dokumen hasil Riset Contoh: Program dokumen DED ( Detail Engineering Design ) FEED ( Front End Engineering Design ) Laporan Analisis Keselamatan (LAK) Rancang bangun Uji kinerja Dokumen prosedu Standardi sasi Model Purwarupa Dataset Dokumen lainnya berdasarkan telaah Kepala Pusat/Organi sasi riset Library", label:"Dokumen Riset Kompleksitas Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Pengembangan signifikan dari teknologi yang ada, tingkat kebaruan tinggi (major improvement), kompleksitas metodologi kombinasi eksperimen, desain, dan validasi. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[20,20,20,20] },
+  { id:"op39", kat:"Dokumen hasil Riset Contoh: Program dokumen DED ( Detail Engineering Design ) FEED ( Front End Engineering Design ) Laporan Analisis Keselamatan (LAK) Rancang bangun Uji kinerja Dokumen prosedu Standardi sasi Model Purwarupa Dataset Dokumen lainnya berdasarkan telaah Kepala Pusat/Organi sasi riset Library", label:"Dokumen Riset Kompleksitas Sedang", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Modifikasi atau adaptasi teknologi yang sudah ada, tingkat kebaruan sedang (incremental improvement), kompleksitas metodologi eksperimen terbatas, pengujian teknis sederhana. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[15,15,15,15] },
+  { id:"op40", kat:"Dokumen hasil Riset Contoh: Program dokumen DED ( Detail Engineering Design ) FEED ( Front End Engineering Design ) Laporan Analisis Keselamatan (LAK) Rancang bangun Uji kinerja Dokumen prosedu Standardi sasi Model Purwarupa Dataset Dokumen lainnya berdasarkan telaah Kepala Pusat/Organi sasi riset Library", label:"Dokumen Riset Kompleksitas Sederhana", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Penerapan langsung teknologi yang sudah mapan, tingkat kebaruan rendah (application only), kompleksitas metodologi implementasi teknis langsung.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[10,10,10,10] },
+  { id:"op41", kat:"Produk Riset Lainnya", label:"Peta yang dihasilkan dari pengolahan data penginderaan jauh dan/atau analisis geospasial", ind:"Jumlah peta", tgt:"1", sat:"Peta", penj:"Produk peta tematik yang dihasilkan dari pengolahan data penginderaan jauh dan/atau analisis geospasial, disertai metodologi yang terdokumentasi dan dapat dipertanggungjawabkan secara ilmiah", bkt:"1. Layout peta yang dihasilkan; 2. Surat Keputusan/bukti penugasan; dan 3. Laporan yang melampirkan bukti yang terverifikasi (publikasi dan/atau yang disahkan Kepala Pusat Riset)", s:[2.5,5,7,10] },
+  { id:"op42", kat:"Produk Riset Lainnya", label:"Galur tanaman atau galur ternak yang terseleksi", ind:"Jumlah galur tanaman atau galur ternak", tgt:"1", sat:"Galur", penj:"Galur tanaman atau ternak hasil seleksi atau pemuliaan yang telah menunjukkan karakter unggul tertentu berdasarkan uji performa, uji adaptasi, atau evaluasi genetik sesuai kaidah ilmiah", bkt:"1. Galur tanaman yang dimaksud; dan 2. Surat Keputusan/Bukti penugasan", s:[10,15,20,25] },
+  { id:"op43", kat:"Produk Riset Lainnya", label:"Temuan Spesies baru", ind:"Jumlah spesies baru", tgt:"1", sat:"Spesies", penj:"Spesies tanaman, hewan, mikroba hasil temuan baru", bkt:"1. Spesies baru yang dimaksud; dan 2. Laporan yang melampirkan bukti yang terverifikasi (publikasi dan/atau yang disahkan Kepala Pusat Riset)", s:[2.5,5,7,10] },
+  { id:"op44", kat:"Produk Riset Lainnya", label:"Isolat mikroba/organisme terkarakterisasi/seed vaksin yang dihasilkan", ind:"Jumlah isolat mikroba/organisme terkarakterisasi/seed vaksin", tgt:"1", sat:"Organis me", penj:"Isolat mikroba/organisme yang telah terkarakteriasi yang dapat digunakan selanjutnya untuk pengembangan vaksin ( seed vaksin), pengembangan antigen, antibodi atau bahan/perangkat kesehatan lainya", bkt:"1. Isolat mikroba/organisme yang dimaskud; dan 2. Laporan yang melampirkan bukti yang terverifikasi", s:[20,20,20,20] },
+  { id:"op45", kat:"Produk Riset Lainnya", label:"Dataset sequence DNA/RNA/ Protein dan dataset human genome serta biomarker", ind:"Jumlah dataset", tgt:"1", sat:"Sekuens / Data", penj:"Dataset sequence DNA/RNA/Protein dan dataset human genome untuk kesehatan merupakan kumpulan data molekuler hasil sekuensing yang memuat informasi genetik organisme dan manusia. Dataset ini digunakan untuk mendeteksi penyakit, mengidentifikasi variasi genetik, serta mendukung pengembangan diagnostik, vaksin, dan terapi berbasis genomik", bkt:"1. Bukti aksesi number dan database sequence yang dimaksud yang terverifikasi atau bukti lainya yang telah terverifikasi; dan 2. Bukti sequence/genome/bi omarker yang dimaksud", s:[10,10,10,10] },
+  { id:"op46", kat:"Produk Riset Lainnya", label:"Dataset biomarker kesehatan", ind:"Jumlah dataset", tgt:"1", sat:"Dataset", penj:"Dataset biomarker kesehatan yang dihasilkan yang berisi berbagai penanda biologis (biomarkers) yang digunakan untuk menilai kondisi kesehatan, mendeteksi penyakit, memantau progres penyakit, atau mengevaluasi respons terhadap terapi", bkt:"1. Bukti dataset biomarker kesehatan yang dihasilkan yang telah terverifikasi, seperti publikasi dan lain-lain; dan 2. Bukti biomarker kesehatan yang dimaksud", s:[10,10,10,10] },
+  { id:"op47", kat:"Produk Riset Lainnya", label:"Metode/perangkat deteksi penyakit dan alat kesehatan", ind:"Jumlah metode/perangkat", tgt:"1", sat:"Produk", penj:"Metode/perangkat deteksi penyakit dan kesehatan hasil riset yang telah diuji dan digunakan", bkt:"1. Produk inovasi yang dimaksud; dan 2. Laporan yang melampirkan bukti yang terverifikasi", s:[20,20,20,20] },
+  { id:"op48", kat:"Produk Riset Lainnya", label:"Antigen/Antibodi/Produk Inovasi diagnostik", ind:"Jumlah antigen/antibodi/produk", tgt:"1", sat:"Produk", penj:"Antigen/Antibodi/Produk Inovasi diagnostik yang telah diuji dan digunakan dalam pengujian", bkt:"1. Produk inovasi yang dimaksud; dan 2. Laporan yang melampirkan bukti yang terverifikasi", s:[20,20,20,20] },
+  { id:"op49", kat:"Proposal", label:"Proposal Riset", ind:"Jumlah proposal yang diusulkan", tgt:"1", sat:"Proposal", penj:"Dokumen perencanaan teknis dan ilmiah yang disusun secara sistematis untuk mengusulkan suatu kegiatan riset", bkt:"1. Dokumen Proposal; dan 2. Bukti pengusulan", s:[2.5,2.5,2.5,2.5] },
+  { id:"op50", kat:"Legal Opinion", label:"Dokumen Analisis Pendapat Hukum", ind:"Jumlah dokumen analisis", tgt:"1", sat:"Doku men", penj:"Analisis dalam bentuk tertulis yang diberikan oleh ahli hukum berdasarkan keahliannya dalam bidang hukum atau perkara hukum tertentu berdasarkan permintaan pihak tertentu", bkt:"1. Dokumen legal opinion; dan 2. Permintaan pihak tertentu untuk legal opinion", s:[2,3,4,5] },
+  { id:"op51", kat:"Keantarik saan", label:"Filling Spektrum Frekuensi operasi satelit", ind:"Jumlah pendaftaran alokasi spektrum", tgt:"1", sat:"Doku men", penj:"Pendaftaran alokasi spektrum frekuensi dan bidang orbit yang akan digunakan untuk mendukung misi dan operasi satelit", bkt:"Dokumen Pernyataan Filling spektrum frekuensi dan orbit satelit di International Telecommunication Union (ITU)", s:[5,10,15,15] },
+  { id:"op52", kat:"Keantarik saan", label:"Operasi In-Orbit Test fase Launch and Early Orbit Phase (LEOP)", ind:"Jumlah kegiatan operasi", tgt:"1", sat:"Kegiatan", penj:"Operasi pemanduan satelit menuju orbit dan test seluruh sistem satelit agar dapat berfungsi di orbit untuk kepastian pemanfaatannya", bkt:"1. Laporan Kegiatan Operasi LEOP; dan 2. Surat tugas Tim LEOP", s:[5,10,15,15] },
+  { id:"op53", kat:"Keantarik saan", label:"Operasi misi satelit Jumlah", ind:"kegiatan operasi", tgt:"1", sat:"Kegiatan", penj:"Operasi misi satelit NGSO 1.", bkt:"Laporan Kegiatan; dan 2. Surat Keputusan Tim", s:[5,10,15,15] },
+  { id:"op54", kat:"Keantarik saan", label:"Operasi misi peluncuran roket dan pemanduan satelit menuju orbit", ind:"Jumlah kegiatan operasi", tgt:"1", sat:"Kegiatan", penj:"Dukungan stasiun bumi untuk operasi peluncuran roket dan pemanduan satelit menuju orbit", bkt:"1. Laporan Kegiatan; dan 2. Surat Tugas Tim", s:[5,10,15,15] },
+  { id:"op55", kat:"Keantarik saan", label:"Analisis data kesehatan satelit dan misi operasi ( Mission Operation and Healt Analysis )", ind:"Jumlah kegiatan analisis", tgt:"1", sat:"Kegiatan", penj:"Pelaksanaan analisis data kesehatan satelit, orbit maneuver, analisis muatan satelit", bkt:"1. Laporan Kegiatan; dan 2. Surat Keputusan penugasan", s:[40,40,40,40] },
+  { id:"op56", kat:"Keantarik saan", label:"Dokumen hasil desain, pengujian, observasi, dan pengukuran parameter subsistem atau sistem satelit", ind:"Jumlah dokumen", tgt:"1", sat:"Doku men", penj:"Kegiatan desain, pengujian, observasi, dan pengukuran parameter subsistem atau sistem satelit", bkt:"1. Laporan Kegiatan; dan 2. Surat Keputusan penugasan", s:[40,40,40,40] },
+  { id:"op57", kat:"Keantarik saan", label:"Dokumen hasil pengujian, observasi, dan pengukuran parameter subsistem atau sistem satelit sebelum dan sesudah pengiraman satelit ke lokasi peluncuran", ind:"Jumlah dokumen", tgt:"1", sat:"Doku men", penj:"kegiatan persiapan satelit sebelum peluncuran,Verifikasi kesiapan peluncuran,Dukungan tim teknis saat peluncuran", bkt:"1. Laporan Kegiatan; dan 2. Surat Keputusan penugasan", s:[5,10,15,15] },
+  { id:"op58", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sangat Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Teknologi baru orisinal, breakthrough, belum ada sebelumnya, tingkat kebaruan sangat tinggi (invention), kompleksitas metodologi multi-disiplin, metode kompleks, pemodelan matematis, simulasi, eksperimen lengkap. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[40,40,40,40] },
+  { id:"op59", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Pengembangan signifikan dari teknologi yang ada, tingkat kebaruan tinggi (major improvement), kompleksitas metodologi kombinasi eksperimen, desain, dan validasi. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[20,20,20,20] },
+  { id:"op60", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sedang", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Modifikasi atau adaptasi teknologi yang sudah ada, tingkat kebaruan sedang (incremental improvement), kompleksitas metodologi eksperimen terbatas, pengujian teknis sederhana. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[15,15,15,15] },
+  { id:"op61", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sederhana", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Penerapan langsung teknologi yang sudah mapan, tingkat kebaruan rendah (application only), kompleksitas metodologi implementasi teknis langsung.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[10,10,10,10] },
+];
+
+const PK_ITEMS = [
+  { id:"pk01", kat:"Penghargaan sebagai Periset Unggul", label:"Penghargaan yang diberikan di bidang dan Teknologi oleh Lembaga Internasional", ind:"Jumlah penghargaan", tgt:"1", sat:"Sertifikat /Tanda Jasa/ Piagam", penj:"Pengakuan resmi yang diberikan oleh lembaga atau organisasi internasional kepada individu atau kelompok atas kontribusi, prestasi, inovasi, atau dampak signifikan dalam bidang ilmu pengetahuan dan teknologi yang diakui pada tingkat global atau lintas negara", bkt:"Sertifikat penghargaan", s:[25,30,35,40] },
+  { id:"pk02", kat:"Penghargaan sebagai Periset Unggul", label:"Penghargaan yang diberikan di bidang dan Teknologi oleh Lembaga Nasional", ind:"Jumlah penghargaan", tgt:"1", sat:"Sertifikat /Tanda Jasa / Piagam", penj:"Pengakuan resmi yang diberikan oleh lembaga atau organisasi tingkat nasional kepada individu atau kelompok atas kontribusi, prestasi, inovasi, atau dampak dalam bidang ilmu pengetahuan dan teknologi yang diakui pada tingkat negara", bkt:"Sertifikat penghargaan", s:[12.5,15,17.5,20] },
+  { id:"pk03", kat:"Diseminasi", label:"Menjadi keynote speaker dalam seminar ilmiah, forum kebijakan, workshop, advokasi pemanfaatan pada tingkat internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran sebagai pembicara utama yang diundang secara resmi dalam seminar ilmiah, forum kebijakan, workshop , atau kegiatan advokasi pemanfaatan ilmu pengetahuan dan teknologi pada tingkat internasional, dengan menyampaikan gagasan, hasil riset, atau rekomendasi strategis kepada peserta dari berbagai negara 2. Berlaku kelipatan dari pelaksanaan kegiatan", bkt:"1. Undangan resmi; dan 2. Laporan per kegiatan", s:[7.5,10,12.5,15] },
+  { id:"pk04", kat:"Diseminasi", label:"Menjadi keynote/invited speaker dalam seminar ilmiah, forum kebijakan, workshop , advokasi pemanfaatan pada tingkat nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran sebagai pembicara utama yang diundang secara resmi dalam seminar ilmiah, forum kebijakan, workshop, atau kegiatan advokasi pemanfaatan Ilmu Pengetahuan dan Teknologi pada tingkat nasional, dengan menyampaikan gagasan, hasil Riset, atau rekomendasi strategis kepada peserta dalam negeri 2. Berlaku kelipatan dari pelaksanaan kegiatan", bkt:"1. Undangan resmi; dan 2. Laporan per kegiatan", s:[5,7.5,10,12.5] },
+  { id:"pk05", kat:"Diseminasi", label:"Menjadi pemakalah oral pada pertemuan ilmiah tingkat internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran sebagai penyaji makalah secara lisan dalam forum ilmiah tingkat internasional, berdasarkan naskah yang telah melalui proses seleksi atau telaah ilmiah, dengan peserta atau penyelenggara yang melibatkan berbagai negara 2. Berlaku kelipatan dari pelaksanaan kegiatan 3. Penilaian berlaku hanya untuk presenter", bkt:"1. Undangan resmi; 2. Makalah yang disajikan; dan 3. Laporan per kegiatan yang memuat foto kegiatan", s:[5,7.5,10,12.5] },
+  { id:"pk06", kat:"Diseminasi", label:"Menjadi pemakalah oral pada pertemuan ilmiah tingkat nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran sebagai penyaji makalah secara lisan dalam forum ilmiah tingkat nasional, berdasarkan naskah yang telah melalui proses seleksi atau telaah ilmiah, dengan peserta atau penyelenggara dalam negeri 2. Berlaku kelipatan dari pelaksanaan kegiatan 3. Penilaian berlaku hanya untuk presenter", bkt:"1. Undangan resmi; 2. Makalah yang disajikan; dan 3. Laporan per kegiatan yang memuat foto kegiatan", s:[2.5,5,7.5,10] },
+  { id:"pk07", kat:"Diseminasi", label:"Menjadi pemakalah poster pada pertemuan ilmiah tingkat internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran sebagai penyaji makalah dalam bentuk poster ilmiah pada forum tingkat internasional, berdasarkan naskah yang telah melalui proses seleksi atau telaah ilmiah, dengan peserta atau penyelenggara dari berbagai negara 2. Berlaku kelipatan dari pelaksanaan kegiatan 3. Penilaian berlaku hanya untuk presenter", bkt:"1. Undangan resmi; 2. Poster yang disajikan; dan 3. Laporan per kegiatan yang memuat foto kegiatan", s:[2.5,5,7.5,10] },
+  { id:"pk08", kat:"Diseminasi", label:"Menjadi pemakalah poster pada pertemuan ilmiah tingkat nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran sebagai penyaji makalah dalam bentuk poster ilmiah pada forum tingkat nasional, berdasarkan naskah yang telah melalui proses seleksi atau telaah ilmiah, dengan peserta atau penyelenggara dalam negeri 2. Berlaku kelipatan dari pelaksanaan kegiatan 3. Penilaian berlaku hanya untuk presenter", bkt:"1. Undangan resmi; 2. Poster yang disajikan; dan 3. Laporan per kegiatan yang memuat foto kegiatan", s:[null,2.5,5,7.5] },
+  { id:"pk09", kat:"Diseminasi", label:"Menjadi pemateri/narasumber pada seminar/webinar ilmiah/ sharing session /FGD/kuliah tamu dan kegiatan sejenis di eksternal BRIN atau media radio/televisi", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Berperan aktif sebagai pemateri dalam seminar/webinar ilmiah/ sharing session /FGD dan kegiatan sejenis yang diselenggarakan di eksternal BRIN atau media radio/televisi 2. Berlaku kelipatan dari pelaksanaan kegiatan", bkt:"1. Undangan resmi; dan 2. Laporan per kegiatan", s:[2,2,5,10] },
+  { id:"pk10", kat:"Diseminasi", label:"Menjadi pemateri pada seminar/webinar ilmiah/ sharing session /FGD dan kegiatan sejenis di internal BRIN atau BRIN TV", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Berperan aktif sebagai pemateri dalam seminar/webinar ilmiah/ sharing session / focus group discussion (FGD) dan kegiatan sejenis yang diselenggarakan di internal BRIN atau BRIN TV 2. Berlaku kelipatan dari pelaksanaan kegiatan", bkt:"1. Undangan resmi; dan 2. Laporan per kegiatan", s:[1,1,2.5,5] },
+  { id:"pk11", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi pembimbing/ host peserta pasca doktoral", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran sebagai pembimbing akademik dan/atau teknis bagi peneliti pasca doktoral dalam pelaksanaan Riset, publikasi ilmiah, pengembangan metodologi, dan penguatan jejaring kolaborasi selama masa penugasan pascadoktoral 2. Berlaku multiyears", bkt:"1. Surat Keputusan penugasan dari Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi; dan 2. Laporan kegiatan pada tahun berjalan", s:[10,12.5,15,null] },
+  { id:"pk12", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Mendatangkan nobel laureate atau setara", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif sebagai host nobel laureate atau setara dalam penguatan jejaring kolaborasi selama masa penugasan 2. Berlaku kelipatan per kegiatan", bkt:"1. Surat Keputusan /Surat keterangan Penugasan dari Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi atau Kepala Organisasi Riset; dan 2. Laporan per kegiatan", s:[15,15,15,15] },
+  { id:"pk13", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi host visiting researcher yang diselenggarakan oleh Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai host/ mendatangkan peserta visiting researcher dari luar negeri yang diselenggarakan oleh Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi 2. Berlaku kelipatan dari jumlah peserta", bkt:"1. Surat Keputusan/Surat keterangan Penugasan dari Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi 2. Laporan kegiatan", s:[7.5,10,12.5,15] },
+  { id:"pk14", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi host visiting researcher yang diselenggarakan oleh unit kerja", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai host/ mendatangkan peserta visiting researcher dari luar negeri yang diselenggarakan oleh unit kerja (paling sedikit 3 (tiga) hari) 2. Berlaku kelipatan dari jumlah peserta", bkt:"1. Surat Keputusan /Surat keterangan Penugasan dari Kepala Unit Kerja; dan 2. Laporan kegiatan", s:[2.5,2.5,2.5,2.5] },
+  { id:"pk15", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi pembimbing peserta magang", ind:"Jumlah program kegiatan", tgt:"1", sat:"Program", penj:"1. Peran aktif sebagai pembimbing yang memberikan arahan teknis, supervisi, dan evaluasi terhadap peserta magang dalam kegiatan Riset atau tugas profesional selama periode tertentu (paling sedikit 1 (satu) bulan) 2. Berlaku kelipatan per program kegiatan (paling banyak 3 (tiga) kali program dalam setahun), bukan kelipatan jumlah peserta", bkt:"1. Surat Keputusan penugasan/bukti penugasan; dan 2. Laporan kegiatan per program kegiatan", s:[2.5,5,7.5,10] },
+  { id:"pk16", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi pembimbing dalam kegiatan coaching atau mentoring", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai mentor atau coach dalam proses peningkatan kompetensi sumber daya manusia internal BRIN melalui pendampingan terstruktur, berbasis target kinerja, penguatan kapasitas, dan evaluasi capaian sesuai program yang ditetapkan oleh Kepala Pusat Riset, dengan fasilitasi dari Biro Organisasi dan Sumber Daya Manusia 2. Berlaku kelipatan jumlah peserta", bkt:"1. Surat Keputusan penugasan/bukti penugasan; dan 2. Laporan kegiatan per program kegiatan", s:[2.5,2.5,5,5] },
+  { id:"pk17", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Membimbing tugas akhir mahasiswa tingkat doktoral (S3)", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai promotor atau co- promotor dalam penyusunan disertasi mahasiswa doktoral, termasuk penguatan kebaruan ilmiah, metodologi, publikasi, dan kontribusi keilmuan 2. Dapat diklaim multiyears (paling lama 3 (tiga) tahun) 3. Berlaku kelipatan jumlah peserta", bkt:"1. Surat Keputusan penugasan/bukti penugasan dari universitas/Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi; dan 2. Laporan pembimbingan pada tahun berjalan", s:[5,7.5,10,null] },
+  { id:"pk18", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Membimbing tugas akhir mahasiswa tingkat magister (S2)", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai pembimbing dalam penyusunan tesis mahasiswa magister, termasuk pengarahan metodologi, analisis, penulisan ilmiah, dan persiapan ujian akhir 2. Dapat diklaim multiyears (paling lama 2 (dua) tahun) 3. Berlaku kelipatan jumlah peserta", bkt:"1. Surat Keputusan penugasan/bukti penugasan dari universitas/Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi 2. Laporan pembimbingan pada tahun berjalan", s:[2.5,5,7.5,10] },
+  { id:"pk19", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Membimbing tugas akhir mahasiswa tingkat sarjana (S1)", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai pembimbing dalam penyusunan skripsi, termasuk pengarahan metodologi, analisis, penulisan ilmiah, dan persiapan ujian akhir (paling lama 1 (satu) tahun) 2. Berlaku kelipatan jumlah peserta", bkt:"1. Surat Keputusan penugasan/bukti penugasan dari universitas/Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi; dan 2. Laporan pembimbingan pada tahun berjalan", s:[2.5,5,7.5,10] },
+  { id:"pk20", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menguji sidang Mahasiswa S1/S2/S3", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran pengujian sidang terhadap mahasiswa S1/S2/S3 2. Berlaku kelipatan per- kegiatan", bkt:"1. Undangan dari Perguruan Tinggi; dan 2. Surat Penugasan Kepala Pusat Riset", s:[2.5,2.5,2.5,2.5] },
+  { id:"pk21", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Membimbing mahasiswa merdeka belajar kampus merdeka (MBKM)", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai pembimbing mahasiswa MBKM 2. Berlaku kelipatan jumlah peserta", bkt:"1. Surat Keputusan penugasan/bukti penugasan dari Deputi Bidang Sumber Daya Manusia Ilmu Pengetahuan dan Teknologi; dan 2. Laporan pembimbingan", s:[2,3,5,7] },
+  { id:"pk22", kat:"Pembim bingan Sumber Daya Manusia", label:"Membimbing sumber daya manusia lain dengan hasil jurnal global bereputasi tinggi, buku ilmiah yang diterbitkan oleh penerbit internasional bereputasi, transaksi lisensi", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif sebagai pembimbing terhadap sumber daya manusia yang menghasilkan luaran berupa artikel pada jurnal global bereputasi tinggi, buku ilmiah dari penerbit internasional bereputasi, atau terwujudnya transaksi lisensi teknologi sebagai hasil dari proses pembimbingan 2. Berlaku kelipatan jumlah peserta", bkt:"1. surat keterangan/surat tugas/bukti penugasan dari Kepala Pusat Riset 2. bukti publikasi/sertifikat Kekayaan Intelektual/Lisensi; dan 3. Surat persetujuan dari peserta yang dibimbing", s:[2.5,5,7.5,null] },
+  { id:"pk23", kat:"Pembim bingan Sumber Daya Manusia", label:"Membimbing sumber daya manusia lain dengan hasil jurnal global bereputasi menengah buku ilmiah yang diterbitkan oleh penerbit internasional lainnya, kekayaan intelektual bersertifikat telah dikabulkan (selain paten sederhana)", ind:"Jumlah peserta", tgt:"1", sat:"Peserta", penj:"1. Peran aktif pembimbing terhadap sumber daya manusia yang menghasilkan luaran berupa artikel pada jurnal global bereputasi menengah, buku ilmiah yang diterbitkan oleh penerbit internasional, atau kekayaan intelektual bersertifikat yang telah dikabulkan (selain paten sederhana), sebagai hasil dari proses pembimbingan 2. Berlaku kelipatan jumlah peserta", bkt:"1. Surat keterangan/surat tugas/bukti penugasan dari Kepala Pusat Riset 2. bukti publikasi/sertifikat kekayaan intelektual/lisensi; dan 3. Surat persetujuan dari peserta yang dibimbing", s:[1,3,5,null] },
+  { id:"pk24", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi instruktur, fasilitator, atau narasumber dalam pelatihan internasional", ind:"Jumlah program pelatihan", tgt:"1", sat:"Program", penj:"1. Peran aktif sebagai instruktur, fasilitator, atau narasumber dalam kegiatan pelatihan yang diselenggarakan oleh lembaga internasional, dengan materi berbasis keahlian ilmiah, teknis, atau profesional 2. Berlaku kelipatan per program pelatihan", bkt:"1. Surat Keputusan penugasan/bukti penugasan /undangan resmi; dan 2. Laporan per kegiatan", s:[5,7.5,10,12.5] },
+  { id:"pk25", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi instruktur, fasilitator, atau narasumber dalam pelatihan teknis nasional", ind:"Jumlah program pelatihan", tgt:"1", sat:"Program", penj:"1. Peran aktif sebagai instruktur, fasilitator, atau narasumber dalam kegiatan pelatihan yang diselenggarakan oleh lembaga nasional termasuk internal BRIN yang terkoordinasi dengan Biro Organisasi dan Sumber Daya Manusia atau Direktorat Pengembangan Kompetensi, dengan materi berbasis keahlian ilmiah, teknis, atau profesional 2. Berlaku kelipatan per program pelatihan", bkt:"1. Surat Keputusan penugasan/bukti penugasan /undangan resmi; dan 2. Laporan per kegiatan", s:[2.5,5,7.5,10] },
+  { id:"pk26", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Menjadi pengajar dalam pelatihan kepemimpinan/manajerial", ind:"Jumlah program pelatihan", tgt:"1", sat:"Program", penj:"1. Peran aktif sebagai instruktur atau fasilitator dalam kegiatan pelatihan yang berfokus pada pengembangan kompetensi kepemimpinan, manajemen organisasi, tata kelola, pengambilan keputusan, dan penguatan kapasitas manajerial 2. Berlaku kelipatan per program pelatihan", bkt:"1. Surat Keputusan penugasan/bukti penugasan /undangan resmi; dan 2. Laporan per kegiatan", s:[5,5,7.5,7.5] },
+  { id:"pk27", kat:"Pendidikan", label:"Melanjutkan pendidikan jenjang S3", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"Peran aktif dalam kegiatan pengembangan kompetensi melalui pendidikan formal pada program doktor (S3) di perguruan tinggi yang terakreditasi, dengan tujuan meningkatkan kapasitas akademik, profesional, dan kontribusi ilmiah sesuai bidang tugas dan keahlian", bkt:"1. Surat Keputusan Tugas Belajar dari Biro Organisasi dan Sumber Daya Manusia 2. Laporan kemajuan studi", s:[15,20,35,40] },
+  { id:"pk28", kat:"Pendidikan", label:"Melanjutkan pendidikan jenjang S2", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"Peran aktif dalam kegiatan pengembangan kompetensi melalui pendidikan formal pada program magister (S2) di perguruan tinggi yang terakreditasi, dengan tujuan meningkatkan kapasitas akademik, profesional, dan kontribusi ilmiah sesuai bidang tugas dan keahlian", bkt:"1. Surat Keputusan Tugas Belajar dari Biro Organisasi dan Sumber Daya Manusia; dan 2. Laporan kemajuan studi", s:[15,20,35,40] },
+  { id:"pk29", kat:"Pendidikan", label:"Mendapatkan LOA/Beasiswa melanjutkan pendidikan jenjang S2/S3", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"Peran aktif dalam kegiatan pengembangan kompetensi melalui pendidikan formal pada program S2/S3 di perguruan tinggi yang terakreditasi, dengan tujuan meningkatkan kapasitas akademik, profesional, dan kontribusi ilmiah sesuai bidang tugas dan keahlian", bkt:"LOA dari perguruan tinggi atau keterangan beasiswa dari donor", s:[7.5,10,17.5,20] },
+  { id:"pk30", kat:"Pendidikan", label:"Melanjutkan pendidikan profesi", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"Peran aktif dalam kegiatan pengembangan kompetensi melalui pendidikan tinggi setelah program sarjana yang menyiapkan periset dalam pekerjaan yang memerlukan persyaratan keahlian khusus, seperti dokter spesialis, insinyur, arsitek, dan lain-lain", bkt:"Sertifikat/Ijazah profesi", s:[10,10,20,20] },
+  { id:"pk31", kat:"Pelatihan", label:"Menjadi peserta pascadoktoral di luar negeri", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif dalam kegiatan pengembangan kapasitas sebagai periset pascadoktoral pada institusi atau lembaga riset di luar negeri dalam jangka waktu tertentu, dengan fokus pada pelaksanaan riset lanjutan, publikasi ilmiah, dan penguatan jejaring kolaborasi internasional 2. Durasi pelatihan paling sedikit 3 (tiga) bulan dalam satu tahun 3. Berlaku multiyears (paling lama 2 (dua) tahun)", bkt:"1. Surat Keputusan penugasan/bukti penugasan; dan 2. Laporan kegiatan", s:[10,10,20,20] },
+  { id:"pk32", kat:"Pelatihan", label:"Menjadi visiting reasearcher", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif dalam kegiatan pengembangan kapasitas sebagai periset visiting reasearcher (VR) pada institusi atau lembaga riset di luar negeri dalam jangka waktu tertentu (paling sedikit 3 (tiga) hari), dengan fokus pada pelaksanaan Riset lanjutan, publikasi ilmiah, dan penguatan jejaring kolaborasi internasional 2. Berlaku kelipatan per kegiatan", bkt:"1. Surat Keputusan penugasan/bukti penugasan; dan 2. Laporan per kegiatan", s:[5,5,10,10] },
+  { id:"pk33", kat:"Pelatihan", label:"Menjadi peserta magang", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif dalam kegiatan pembelajaran praktik melalui penempatan sementara pada unit kerja, lembaga, atau industri untuk memperoleh pengalaman teknis dan/atau manajerial sesuai bidang kompetensi (paling sedikit 3 (tiga) bulan) 2. Berlaku kelipatan per program kegiatan", bkt:"1. Surat Keputusan penugasan/bukti penugasan; dan 2. Laporan per program kegiatan", s:[null,5,10,15] },
+  { id:"pk34", kat:"Pelatihan", label:"Menjadi peserta dalam kegiatan pelatihan internasional", ind:"Jumlah program kegiatan", tgt:"1", sat:"Program", penj:"1. Peran aktif dalam kegiatan peningkatan kompetensi melalui pelatihan yang diselenggarakan oleh lembaga internasional termasuk pelatihan online , dengan materi yang relevan dengan pengembangan profesional atau ilmiah (paling sedikit 3 (tiga) hari) 2. Berlaku kelipatan per program kegiatan", bkt:"1. Surat Keputusan penugasan/bukti penugasan; dan 2. Laporan per program kegiatan", s:[2.5,5,7.5,10] },
+  { id:"pk35", kat:"Pelatihan", label:"Menjadi peserta dalam kegiatan coaching atau mentoring", ind:"Jumlah program kegiatan", tgt:"1", sat:"Program", penj:"1. Peran aktif sebagai peserta dalam kegiatan peningkatan kompetensi sumber daya manusia internal BRIN melalui pendampingan terstruktur, berbasis target kinerja, penguatan kapasitas, dan evaluasi capaian sesuai program yang ditetapkan oleh Kepala Pusat Riset, dengan fasilitasi Biro Organisasi dan Sumber Daya Manusia 2. Berlaku kelipatan per program kegiatan", bkt:"1. Surat keterangan/bukti penugasan; dan 2. Laporan per kegiatan", s:[null,2.5,5,7.5] },
+  { id:"pk36", kat:"Pelatihan", label:"Menjadi peserta dalam pelatihan teknis nasional", ind:"Jumlah program pelatihan", tgt:"1", sat:"Program", penj:"1. Peran aktif sebagai peserta dalam kegiatan pelatihan yang diselenggarakan oleh lembaga nasional termasuk internal BRIN yang terkoordinasi dengan Biro Organisasi dan Sumber Daya Manusia atau Direktorat Pengembangan Kompetensi, dengan materi berbasis keahlian ilmiah, teknis, atau profesional 2. Berlaku kelipatan per program pelatihan", bkt:"1. Surat keterangan/bukti penugasan; dan 2. Laporan per kegiatan", s:[null,2.5,5,7.5] },
+  { id:"pk37", kat:"Pelatihan", label:"Menjadi peserta dalam Pelatihan Kepemimpinan/Manajerial", ind:"Jumlah program pelatihan", tgt:"1", sat:"Program", penj:"1. Peran aktif sebagai peserta dalam kegiatan pengembangan kompetensi kepemimpinan dan manajerial melalui pelatihan yang berfokus pada penguatan kemampuan pengelolaan organisasi, pengambilan keputusan, tata kelola, dan manajemen kinerja 2. Berlaku kelipatan per program pelatihan", bkt:"1. Surat keterangan/bukti penugasan; dan 2. Laporan per kegiatan", s:[5,5,5,5] },
+  { id:"pk38", kat:"Pelatihan", label:"Menjadi peserta dalam kegiatan seminar/webinar ilmiah/ sharing session/focus group discussion ( FGD) internasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif sebagai peserta dalam kegiatan seminar/webinar ilmiah/ sharing session/ FGD yang dihadiri oleh narasumber dari luar negeri 2. Berlaku kelipatan per kegiatan", bkt:"Sertifikat/Laporan kegiatan", s:[2,3,4,5] },
+  { id:"pk39", kat:"Pelatihan", label:"Menjadi peserta dalam kegiatan seminar/webinar ilmiah/ sharing session/ focus group discussion ( FGD) nasional", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif sebagai peserta dalam kegiatan seminar/webinar ilmiah/ sharing session/FGD yang dihadiri oleh narasumber dari eksternal BRIN (nasional) 2. Berlaku kelipatan per kegiatan", bkt:"Sertifikat/Laporan kegiatan", s:[null,2,3,4] },
+  { id:"pk40", kat:"Pelatihan", label:"Menjadi peserta dalam kegiatan seminar/webinar ilmiah/ sharing session / focus group discussion ( FGD) internal BRIN", ind:"Jumlah kegiatan", tgt:"1", sat:"Kegiatan", penj:"1. Peran aktif sebagai peserta dalam kegiatan seminar/webinar ilmiah/ sharing session /FGD yang dihadiri oleh narasumber internal BRIN 2. Berlaku kelipatan per kegiatan", bkt:"Sertifikat/Laporan kegiatan", s:[null,1,2,3] },
+  { id:"pk41", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Dokumen Riset Kompleksitas Sangat Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Teknologi baru orisinal, breakthrough, belum ada sebelumnya, tingkat kebaruan sangat tinggi (invention), kompleksitas metodologi multi-disiplin, metode kompleks, pemodelan matematis, simulasi, eksperimen lengkap. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[40,40,40,40] },
+  { id:"pk42", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Dokumen Riset Kompleksitas Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Pengembangan signifikan dari teknologi yang ada, tingkat kebaruan tinggi (major improvement), kompleksitas metodologi kombinasi eksperimen, desain, dan validasi. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[20,20,20,20] },
+  { id:"pk43", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Dokumen Riset Kompleksitas Sedang", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Modifikasi atau adaptasi teknologi yang sudah ada, tingkat kebaruan sedang (incremental improvement), kompleksitas metodologi eksperimen terbatas, pengujian teknis sederhana. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[15,15,15,15] },
+  { id:"pk44", kat:"Pembimbi ngan Sumber Daya Manusia", label:"Dokumen Riset Kompleksitas Sederhana", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Penerapan langsung teknologi yang sudah mapan, tingkat kebaruan rendah (application only), kompleksitas metodologi implementasi teknis langsung.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[10,10,10,10] },
+  { id:"pk45", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sangat Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Teknologi baru orisinal, breakthrough, belum ada sebelumnya, tingkat kebaruan sangat tinggi (invention), kompleksitas metodologi multi-disiplin, metode kompleks, pemodelan matematis, simulasi, eksperimen lengkap. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[40,40,40,40] },
+  { id:"pk46", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Tinggi", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Pengembangan signifikan dari teknologi yang ada, tingkat kebaruan tinggi (major improvement), kompleksitas metodologi kombinasi eksperimen, desain, dan validasi. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[20,20,20,20] },
+  { id:"pk47", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sedang", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Modifikasi atau adaptasi teknologi yang sudah ada, tingkat kebaruan sedang (incremental improvement), kompleksitas metodologi eksperimen terbatas, pengujian teknis sederhana. Penilaian kompleksitas merujuk pada dokumen terlampir.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[15,15,15,15] },
+  { id:"pk48", kat:"Prioritas Nasional", label:"Dokumen Riset Kompleksitas Sederhana", ind:"Jumlah dokumen/dataset/model/purwarupa", tgt:"1", sat:"Produk", penj:"Penerapan langsung teknologi yang sudah mapan, tingkat kebaruan rendah (application only), kompleksitas metodologi implementasi teknis langsung.", bkt:"1. Surat Keputusan penugasan kegiatan Riset; dan 2. Laporan kegiatan Riset yang disahkan Kepala Pusat Riset/Kepala Organisasi Riset", s:[10,10,10,10] },
+];
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+// ID butir pendidikan lanjut yang tidak berlaku bagi pemegang S3
+const S3_EXCLUDED = new Set(["pk27","pk28","pk29","pk30"]);
+
+function getScore(item, member) {
+  const i = JI[member.jenjang];
+  if (member.pendidikan === "S3" && S3_EXCLUDED.has(item.id)) return null;
+  if (item.s !== undefined) return item.s[i];
+  return (member.jenis === "Perekayasa" ? item.rk : item.p)[i];
+}
+function calcNplus(y, x) {
+  if (x === 0) return 0;
+  const fk = y < x ? 0.5 : 0.4;
+  return (y / x - 1) * fk * x;
+}
+function calcSKP(member, qty, bulan) {
+  const nd  = getND(member.jenjang, bulan); // nd proporsional sesuai periode (untuk koreksi)
+  const ndt = getND(member.jenjang, 12);    // nd tahunan 12 bulan (selalu jadi basis nilai akhir)
+  const sum = items => items.reduce((acc, it) => {
+    const s = getScore(it, member);
+    return acc + (s != null ? s * (qty[it.id] || 0) : 0);
+  }, 0);
+  const yPS = sum(PS_ITEMS), yOC = sum(OC_ITEMS), yOP = sum(OP_ITEMS), yPK = sum(PK_ITEMS);
+  const cPS = Math.min(yPS, nd.mPS), cOC = Math.min(yOC, nd.mOC);
+  const cOP = Math.min(yOP, nd.mOP), cPK = Math.min(yPK, nd.mPK);
+  // Rumus SK: nilai akhir = ndt_k + nk_k  (Kep. KaBRIN No. 15/I/HK/2026, hal. 16)
+  // Basis = nd tahunan; koreksi dihitung dari nd proporsional periode
+  const sPS = ndt.PS + calcNplus(cPS, nd.PS);
+  const sOC = ndt.OC + calcNplus(cOC, nd.OC);
+  const sOP = ndt.OP + calcNplus(cOP, nd.OP);
+  const sPK = ndt.PK + calcNplus(cPK, nd.PK);
+  const total = sPS + sOC + sOP + sPK;
+  const effectiveTotal = total;
+  const hasZero = [yPS,yOC,yOP,yPK].some(v => v === 0);
+  const zeroComponents = [
+    { label:"Peran Strategis",        y:yPS },
+    { label:"Outcome",                y:yOC },
+    { label:"Output",                 y:yOP },
+    { label:"Peningkatan Kompetensi", y:yPK },
+  ].filter(c => c.y === 0).map(c => c.label);
+  // Tabel 3.1 Kep. KaBRIN No. 15/I/HK/2026 hal. 17:
+  // ≥110 & semua komponen > 0 → Di atas Ekspektasi
+  // ≥110 tapi ada komponen = 0 → downgrade ke Sesuai Ekspektasi
+  // 90–109.99 → Sesuai Ekspektasi
+  // < 90 → Di bawah Ekspektasi
+  const rating = total >= 110 && !hasZero ? "Di atas Ekspektasi"
+               : total >= 90              ? "Sesuai Ekspektasi"
+               :                           "Di bawah Ekspektasi";
+  return { yPS,yOC,yOP,yPK, cPS,cOC,cOP,cPK, sPS,sOC,sOP,sPK, total, rating, nd, ndt, hasZero, zeroComponents };
+}
+
+// ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
+function HoverTooltip({ item }) {
+  const [show, setShow] = React.useState(false);
+  const [pos,  setPos]  = React.useState({ top:0, left:0 });
+  const ref = React.useRef(null);
+
+  function handleEnter() {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    const tipW = 360;
+    let left = r.left;
+    if (left + tipW > window.innerWidth - 12) left = window.innerWidth - tipW - 12;
+    if (left < 8) left = 8;
+    setPos({ top: r.bottom + 6, left });
+    setShow(true);
+  }
+
+  const rows = [
+    { label:"Indikator",         val: item.ind  },
+    { label:"Target",            val: item.tgt + (item.sat ? " " + item.sat : "") },
+    { label:"Penjelasan",        val: item.penj },
+    { label:"Bukti Kelengkapan", val: item.bkt  },
+  ];
+
+  return (
+    <>
+      <span ref={ref}
+        onMouseEnter={handleEnter}
+        onMouseLeave={() => setShow(false)}
+        style={{ cursor:"help", borderBottom:"1px dashed #94a3b8" }}>
+        {item.label}
+      </span>
+      {show && (
+        <div onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}
+          style={{ position:"fixed", top:pos.top, left:pos.left,
+            width:360, background:"#fff", borderRadius:10, zIndex:999,
+            boxShadow:"0 6px 24px rgba(0,0,0,.18)", border:"1px solid #e2e8f0",
+            fontSize:12, overflow:"hidden" }}>
+          <div style={{ background:"linear-gradient(135deg,#14532d,#15803d)",
+            padding:"10px 14px" }}>
+            <div style={{ fontSize:9,color:"#86efac",fontWeight:700,letterSpacing:2,
+              textTransform:"uppercase",marginBottom:3 }}>{item.kat}</div>
+            <div style={{ color:"#fff",fontWeight:700,lineHeight:1.4 }}>{item.label}</div>
+          </div>
+          <div style={{ padding:"10px 14px" }}>
+            {rows.map(({ label, val }) => val ? (
+              <div key={label} style={{ marginBottom:8 }}>
+                <div style={{ fontSize:9,fontWeight:700,color:"#16a34a",
+                  textTransform:"uppercase",letterSpacing:1.5,marginBottom:2 }}>{label}</div>
+                <div style={{ color:"#334155",lineHeight:1.5,
+                  borderLeft:"2px solid #bbf7d0",paddingLeft:8 }}>{val}</div>
+              </div>
+            ) : null)}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function QtyBtn({ value, onChange, disabled }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+      <button onClick={() => !disabled && value > 0 && onChange(value-1)}
+        disabled={disabled || value===0}
+        style={{ width:28,height:28,borderRadius:6,border:"1.5px solid #cbd5e1",
+          background:value===0||disabled?"#f8fafc":"#fff",
+          cursor:disabled||value===0?"default":"pointer",
+          fontSize:16,fontWeight:700,color:value===0||disabled?"#cbd5e1":"#475569",
+          display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>−</button>
+      <span style={{ width:28,textAlign:"center",fontWeight:700,fontSize:14,
+        color:value>0?"#15803d":"#94a3b8" }}>{value}</span>
+      <button onClick={() => !disabled && onChange(value+1)}
+        disabled={disabled}
+        style={{ width:28,height:28,borderRadius:6,border:"1.5px solid #15803d",
+          background:disabled?"#f0fdf4":"#15803d",
+          cursor:disabled?"default":"pointer",
+          fontSize:16,fontWeight:700,color:"#fff",
+          display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>+</button>
+    </div>
+  );
+}
+
+function CompBar({ label, y, x, xBase, max, score, color }) {
+  const pct = Math.min(100, (y / Math.max(max,1)) * 100);
+  const ok  = y >= x;
+  const periodik = x !== xBase; // true jika bukan 12 bulan penuh
+  return (
+    <div style={{ marginBottom:14 }}>
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:4 }}>
+        <span style={{ fontSize:13,fontWeight:600,color:"#334155" }}>{label}</span>
+        <div style={{ fontSize:12,textAlign:"right" }}>
+          <span style={{ color:ok?"#16a34a":"#dc2626",fontWeight:700 }}>
+            Capaian: {y%1===0?y:y.toFixed(1)}
+          </span>
+          <span style={{ color:"#94a3b8",marginLeft:4 }}>
+            / target {x}{periodik ? ` (${x} = nd periode, basis ndt: ${xBase})` : ""}
+          </span>
+        </div>
+      </div>
+      <div style={{ height:10,background:"#e2e8f0",borderRadius:6,overflow:"hidden" }}>
+        <div style={{ height:"100%",width:`${pct}%`,background:ok?color:"#f87171",
+          borderRadius:6,transition:"width 0.4s ease" }}/>
+      </div>
+      <div style={{ textAlign:"right",marginTop:3 }}>
+        <span style={{ fontSize:11,color:"#64748b" }}>
+          Skor komponen: <b style={{ color:"#1e293b" }}>{score.toFixed(2)}</b>
+          <span style={{ color:"#94a3b8" }}> (ndt basis: {xBase})</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function MemberSearch({ onSelect, selName }) {
+  const [query, setQuery]   = React.useState(selName || "");
+  const [open,  setOpen]    = React.useState(false);
+  const ref = React.useRef(null);
+
+  // Sinkronkan tampilan saat selName di-reset dari luar (load JSON)
+  React.useEffect(() => { setQuery(selName || ""); }, [selName]);
+
+  const results = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 3) return [];
+    return MEMBERS.filter(m => m.nama.toLowerCase().includes(q));
+  }, [query]);
+
+  // Tutup dropdown saat klik di luar
+  React.useEffect(() => {
+    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function choose(nama) {
+    setQuery(nama);
+    setOpen(false);
+    onSelect(nama);
+  }
+
+  const matched = MEMBERS.find(m => m.nama === query);
+
+  return (
+    <div ref={ref} style={{ position:"relative" }}>
+      <div style={{ position:"relative" }}>
+        <span style={{ position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",fontSize:16,color:"#16a34a" }}>🔍</span>
+        <input
+          type="text"
+          value={query}
+          placeholder="Ketik minimal 3 huruf nama anggota..."
+          onChange={e => { setQuery(e.target.value); setOpen(true); if(!e.target.value) onSelect(""); }}
+          onFocus={() => { if(query.trim().length >= 3) setOpen(true); }}
+          style={{ width:"100%",padding:"11px 14px 11px 40px",borderRadius:9,
+            border:`2px solid ${matched?"#16a34a":"#bbf7d0"}`,fontSize:15,
+            background:"#fff",outline:"none",fontFamily:"inherit",
+            color:"#1e293b",boxSizing:"border-box" }} />
+        {query && (
+          <button onClick={() => { setQuery(""); setOpen(false); onSelect(""); }}
+            style={{ position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",
+              background:"none",border:"none",cursor:"pointer",fontSize:18,color:"#94a3b8",lineHeight:1 }}>✕</button>
+        )}
+      </div>
+
+      {/* Dropdown hasil pencarian */}
+      {open && results.length > 0 && (
+        <div style={{ position:"absolute",top:"calc(100% + 4px)",left:0,right:0,zIndex:500,
+          background:"#fff",borderRadius:10,boxShadow:"0 6px 24px rgba(0,0,0,.14)",
+          border:"1.5px solid #bbf7d0",maxHeight:280,overflowY:"auto" }}>
+          {results.map((m,i) => (
+            <div key={m.nama} onClick={() => choose(m.nama)}
+              style={{ padding:"10px 14px",cursor:"pointer",borderTop:i>0?"1px solid #f1f5f9":"none",
+                background:"#fff",transition:"background .1s" }}
+              onMouseEnter={e => e.currentTarget.style.background="#f0fdf4"}
+              onMouseLeave={e => e.currentTarget.style.background="#fff"}>
+              <div style={{ fontSize:14,fontWeight:600,color:"#1e293b" }}>{m.nama}{m.panggilan ? <span style={{fontSize:12,color:"#94a3b8",marginLeft:6}}>({m.panggilan})</span> : null}</div>
+              <div style={{ fontSize:11,color:"#64748b",marginTop:2 }}>
+                {m.jabatan} &nbsp;·&nbsp; {m.kr} &nbsp;·&nbsp; {m.pendidikan}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Petunjuk */}
+      {!matched && query.trim().length > 0 && query.trim().length < 3 && (
+        <div style={{ fontSize:11,color:"#94a3b8",marginTop:6 }}>Ketik {3 - query.trim().length} huruf lagi untuk mulai mencari...</div>
+      )}
+      {open && query.trim().length >= 3 && results.length === 0 && (
+        <div style={{ fontSize:12,color:"#ef4444",marginTop:6 }}>Tidak ditemukan. Coba kata kunci lain.</div>
+      )}
+    </div>
+  );
+}
+
+function App() {
+  const [selName,    setSelName]    = useState("");
+  const [bulan,      setBulan]      = useState(12);
+  const [activeTab,  setActiveTab]  = useState("PS");
+  const [qty,        setQty]        = useState({});
+  const [openKat,    setOpenKat]    = useState({});
+  const [popupItem,  setPopupItem]  = useState(null); // tidak dipakai, reserved
+
+  const [uploadMsg,  setUploadMsg]  = useState(null); // { type:"ok"|"err", text }
+  const fileInputRef = React.useRef(null);
+
+  const member     = MEMBERS.find(m => m.nama === selName) || null;
+  const setItemQty = (id, v) => setQty(prev => ({ ...prev, [id]: Math.max(0, v) }));
+  const getQty     = id => qty[id] || 0;
+  const toggleKat  = k  => setOpenKat(prev => ({ ...prev, [k]: !prev[k] }));
+
+  // ── SAVE ──────────────────────────────────────────────────────────────────
+  function saveToJson() {
+    // Bangun daftar butir yang dipilih beserta keterangannya
+    const ALL_ITEMS = [
+      ...PS_ITEMS.map(it => ({ ...it, komponen:"Peran Strategis" })),
+      ...OC_ITEMS.map(it => ({ ...it, komponen:"Outcome" })),
+      ...OP_ITEMS.map(it => ({ ...it, komponen:"Output" })),
+      ...PK_ITEMS.map(it => ({ ...it, komponen:"Peningkatan Kompetensi" })),
+    ];
+    const butir_dipilih = ALL_ITEMS
+      .filter(it => (qty[it.id] || 0) > 0)
+      .map(it => ({
+        id:        it.id,
+        komponen:  it.komponen,
+        kategori:  it.kat,
+        butir:     it.label,
+        jumlah:    qty[it.id],
+        nilai_per_butir: getScore(it, member),
+        subtotal:  (getScore(it, member) || 0) * qty[it.id],
+      }));
+
+    const payload = {
+      _info:    "Simulasi Nilai SKP PRSDI – Kep. KaBRIN No. 15/I/HK/2026",
+      savedAt:  new Date().toISOString(),
+      nama:     selName,
+      nip:      member?.nip || "",
+      jabatan:  member?.jabatan || "",
+      jenjang:  member?.jenjang || "",
+      kr:       member?.kr || "",
+      bulan_aktif: bulan,
+      butir_dipilih,
+      qty,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type:"application/json" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    const now = new Date();
+    const pad = n => String(n).padStart(2,"0");
+    const ts  = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    a.download = `${member?.panggilan || selName}_simulasi_nilai_skp_prsdi-${ts}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showMsg("ok", `Data ${selName || "(kosong)"} berhasil disimpan.`);
+  }
+
+  // ── LOAD ──────────────────────────────────────────────────────────────────
+  function loadFromJson(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = "";          // reset input agar file yang sama bisa diupload ulang
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data.nama || typeof data.qty !== "object") throw new Error("Format tidak dikenali.");
+        const found = MEMBERS.find(m => m.nama === data.nama);
+        if (!found) throw new Error(`Nama "${data.nama}" tidak ditemukan dalam daftar anggota.`);
+        setSelName(data.nama);
+        if (data.bulan && data.bulan >= 1 && data.bulan <= 12) setBulan(data.bulan);
+        setQty(data.qty || {});
+        setOpenKat({});
+        setActiveTab("PS");
+        const ts = data.savedAt ? new Date(data.savedAt).toLocaleString("id-ID") : "-";
+        showMsg("ok", `Data ${data.nama} dimuat. Tersimpan: ${ts}`);
+      } catch(err) {
+        showMsg("err", `Gagal memuat file: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function showMsg(type, text) {
+    setUploadMsg({ type, text });
+    setTimeout(() => setUploadMsg(null), 5000);
+  }
+
+  const res = useMemo(() => member ? calcSKP(member, qty, bulan) : null, [member, qty, bulan]);
+
+  const TABS = [
+    { key:"PS", label:"Peran Strategis",        items:PS_ITEMS, color:"#2563eb" },
+    { key:"OC", label:"Outcome",                items:OC_ITEMS, color:"#7c3aed" },
+    { key:"OP", label:"Output",                 items:OP_ITEMS, color:"#b45309" },
+    { key:"PK", label:"Peningkatan Kompetensi", items:PK_ITEMS, color:"#0369a1" },
+  ];
+  const yMap    = { PS:"yPS", OC:"yOC", OP:"yOP", PK:"yPK" };
+  const curTab  = TABS.find(t => t.key === activeTab);
+
+  const grouped = useMemo(() => {
+    if (!curTab || !member) return {};
+    return curTab.items.reduce((acc, item) => {
+      const s = getScore(item, member);
+      (acc[item.kat] = acc[item.kat] || []).push({ ...item, _s: s });
+      return acc;
+    }, {});
+  }, [activeTab, member]);
+
+  const suggestions = useMemo(() => {
+    if (!member || !res) return [];
+    return [
+      { label:"Peran Strategis",        y:res.yPS, x:res.nd.PS, items:PS_ITEMS },
+      { label:"Outcome",                y:res.yOC, x:res.nd.OC, items:OC_ITEMS },
+      { label:"Output",                 y:res.yOP, x:res.nd.OP, items:OP_ITEMS },
+      { label:"Peningkatan Kompetensi", y:res.yPK, x:res.nd.PK, items:PK_ITEMS },
+    ]
+      .filter(c => c.y < c.x)
+      .map(c => ({
+        label: c.label, gap: c.x - c.y,
+        top: c.items
+          .map(it => ({ ...it, _s: getScore(it, member) }))
+          .filter(it => it._s != null && getQty(it.id) === 0)
+          .sort((a,b) => b._s - a._s)
+          .slice(0, 5),
+      }));
+  }, [member, res, qty]);
+
+  const ratingCfg = {
+    "Di atas Ekspektasi":  { bg:"#f0fdf4",ring:"#86efac",text:"#15803d",icon:"🏆",sub:"Nilai SKP Anda melampaui target!" },
+    "Sesuai Ekspektasi":   { bg:"#fffbeb",ring:"#fcd34d",text:"#b45309",icon:"✅",sub:"Nilai SKP Anda memenuhi target." },
+    "Di bawah Ekspektasi": { bg:"#fff1f2",ring:"#fca5a5",text:"#b91c1c",icon:"⚠️",sub:"Nilai belum mencukupi. Lihat saran di bawah." },
+  };
+
+  return (
+    <div style={{ fontFamily:"'Segoe UI',system-ui,sans-serif",minHeight:"100vh",background:"#f8fafc" }}>
+
+      {/* HEADER */}
+      <div style={{ background:"linear-gradient(135deg,#14532d 0%,#166534 60%,#15803d 100%)",padding:"24px 20px 20px",color:"#fff" }}>
+        <div style={{ maxWidth:860,margin:"0 auto" }}>
+          <div style={{ fontSize:10,letterSpacing:3,opacity:.7,textTransform:"uppercase",marginBottom:6 }}>BRIN · PRSDI · OR EI</div>
+          <h1 style={{ margin:0,fontSize:24,fontWeight:800,letterSpacing:"-0.5px" }}>🧮 Simulasi Nilai SKP - PRSDI</h1>
+          <p style={{ margin:"6px 0 0",opacity:.8,fontSize:13 }}>Cek kecukupan Nilai Hasil Kerja Komponen SKP berdasarkan Kep. KaBRIN No. 15/I/HK/2026</p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:860,margin:"0 auto",padding:"20px 16px 40px" }}>
+
+        {/* STEP 1 */}
+        <div style={{ background:"#fff",borderRadius:14,padding:20,marginBottom:14,boxShadow:"0 1px 4px rgba(0,0,0,.08)" }}>
+          <div style={{ fontSize:11,color:"#16a34a",fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:10 }}>① Pilih Nama Anggota PRSDI</div>
+          <MemberSearch onSelect={nama => { setSelName(nama); setQty({}); setOpenKat({}); setActiveTab("PS"); }} selName={selName} />
+        </div>
+
+        {/* TOOLBAR SAVE / LOAD */}
+        <div style={{ display:"flex",gap:10,marginBottom:14,flexWrap:"wrap" }}>
+          <button onClick={saveToJson} disabled={!selName}
+            title={selName ? "Simpan data pengisian ke file JSON" : "Pilih anggota dulu sebelum menyimpan"}
+            style={{ flex:1,minWidth:140,display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+              padding:"10px 16px",borderRadius:9,border:"none",cursor:selName?"pointer":"not-allowed",
+              background:selName?"#15803d":"#d1fae5",color:selName?"#fff":"#6ee7b7",
+              fontWeight:700,fontSize:13,fontFamily:"inherit",transition:"background .2s" }}>
+            💾 Simpan ke JSON
+          </button>
+          <button onClick={() => fileInputRef.current.click()}
+            style={{ flex:1,minWidth:140,display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+              padding:"10px 16px",borderRadius:9,border:"2px solid #bbf7d0",cursor:"pointer",
+              background:"#fff",color:"#166534",fontWeight:700,fontSize:13,
+              fontFamily:"inherit",transition:"border-color .2s" }}>
+            📂 Muat dari JSON
+          </button>
+          <input ref={fileInputRef} type="file" accept=".json" onChange={loadFromJson}
+            style={{ display:"none" }} />
+        </div>
+
+        {uploadMsg && (
+          <div style={{ marginBottom:14,padding:"10px 16px",borderRadius:10,fontSize:13,fontWeight:600,
+            display:"flex",alignItems:"center",gap:10,
+            background:uploadMsg.type==="ok"?"#f0fdf4":"#fff1f2",
+            border:`1.5px solid ${uploadMsg.type==="ok"?"#86efac":"#fca5a5"}`,
+            color:uploadMsg.type==="ok"?"#166534":"#b91c1c" }}>
+            <span style={{ fontSize:18 }}>{uploadMsg.type==="ok"?"✅":"❌"}</span>
+            {uploadMsg.text}
+          </div>
+        )}
+
+        {/* STEP 2 – PROFIL */}
+        {member && (
+          <div style={{ background:"#fff",borderRadius:14,padding:20,marginBottom:14,boxShadow:"0 1px 4px rgba(0,0,0,.08)",borderLeft:`4px solid ${member.nonStandar?"#dc2626":"#16a34a"}` }}>
+            <div style={{ fontSize:11,color:"#16a34a",fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:12 }}>② Profil Anggota</div>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:10,marginBottom:10 }}>
+              {[{l:"Nama",v:member.panggilan ? `${member.nama} (${member.panggilan})` : member.nama},{l:"NIP",v:member.nip},{l:"Jabatan Fungsional",v:member.jabatan}].map(({l,v}) => (
+                <div key={l} style={{ background:"#f0fdf4",borderRadius:9,padding:"10px 12px" }}>
+                  <div style={{ fontSize:10,color:"#16a34a",fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:3 }}>{l}</div>
+                  <div style={{ fontSize:14,fontWeight:700,color:"#1e293b" }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:"flex",gap:8,flexWrap:"wrap",marginTop:10 }}>
+              <div style={{ background:"#eff6ff",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#1d4ed8",flex:1,minWidth:200 }}>
+                <b>Jenjang:</b> {member.jenjang} &nbsp;·&nbsp; <b>Jenis Jabatan:</b> {member.jenis}
+              </div>
+              <div style={{ background:member.pendidikan==="S3"?"#faf5ff":member.pendidikan==="S2"?"#f0f9ff":"#fff7ed",
+                borderRadius:8,padding:"8px 12px",fontSize:12,
+                color:member.pendidikan==="S3"?"#6b21a8":member.pendidikan==="S2"?"#0369a1":"#c2410c",
+                display:"flex",alignItems:"center",gap:6 }}>
+                <span style={{ fontSize:16 }}>{member.pendidikan==="S3"?"🎓":member.pendidikan==="S2"?"📘":"📗"}</span>
+                <span><b>Pendidikan:</b> {member.pendidikan==="S3"?"S3 / Doktor":member.pendidikan==="S2"?"S2 / Magister":"S1 / Sarjana"}</span>
+                {member.pendidikan==="S3" && <span style={{ fontSize:10,background:"#ede9fe",color:"#6b21a8",borderRadius:4,padding:"1px 6px",fontWeight:700 }}>Butir lanjut studi dinonaktifkan</span>}
+              </div>
+            </div>
+
+            {/* Peringatan jabatan fungsional umum */}
+            {member.nonStandar && (
+              <div style={{ marginTop:14,background:"#fef2f2",border:"1.5px solid #fca5a5",borderRadius:10,padding:"12px 16px" }}>
+                <div style={{ fontSize:13,fontWeight:700,color:"#b91c1c",marginBottom:4 }}>
+                  🚫 Jabatan Fungsional Umum — Tidak Tercakup SK KaBRIN
+                </div>
+                <div style={{ fontSize:12,color:"#991b1b",lineHeight:1.6 }}>
+                  <b>Penelaah Teknis Kebijakan</b> adalah jabatan fungsional umum yang <b>tidak menggunakan</b> Keputusan Kepala BRIN No. 15/I/HK/2026 tentang Standar SKP bagi SDM IPTEK. Simulasi nilai SKP dengan skrip ini tidak dapat dilakukan untuk jabatan ini.
+                </div>
+              </div>
+            )}
+
+            {/* Input bulan aktif — hanya untuk jabatan standar */}
+            {!member.nonStandar && (
+              <div style={{ marginTop:12,background:"#f0fdf4",borderRadius:10,padding:"12px 14px",
+                border:"1.5px solid #bbf7d0" }}>
+                <div style={{ fontSize:11,color:"#16a34a",fontWeight:700,textTransform:"uppercase",
+                  letterSpacing:1.5,marginBottom:8 }}>📅 Jumlah Bulan Aktif Bekerja dalam Periode Penilaian</div>
+                <div style={{ display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:4 }}>
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(b => (
+                      <button key={b} onClick={() => setBulan(b)}
+                        style={{ width:32,height:32,borderRadius:6,border:"none",cursor:"pointer",
+                          fontWeight:700,fontSize:13,fontFamily:"inherit",
+                          background:bulan===b?"#15803d":"#e2e8f0",
+                          color:bulan===b?"#fff":"#475569",
+                          transition:"background .15s" }}>{b}</button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize:12,color:"#166534",flex:1,minWidth:180 }}>
+                    {bulan === 12
+                      ? <span>✅ <b>Penuh 12 bulan</b> — nilai dasar normal</span>
+                      : <span>⚠️ <b>{bulan} bulan</b> aktif — nilai dasar dihitung proporsional sesuai Kep. KaBRIN No. 15/I/HK/2026</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 3 – INPUT */}
+        {member && !member.nonStandar && (
+          <div style={{ background:"#fff",borderRadius:14,marginBottom:14,boxShadow:"0 1px 4px rgba(0,0,0,.08)",overflow:"hidden" }}>
+            <div style={{ padding:"16px 20px 0",borderBottom:"1px solid #f1f5f9" }}>
+              <div style={{ fontSize:11,color:"#16a34a",fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:12 }}>③ Input Capaian SKP</div>
+              <div style={{ display:"flex",gap:4 }}>
+                {TABS.map(t => {
+                  const active  = t.key === activeTab;
+                  const hasData = res && res[yMap[t.key]] > 0;
+                  return (
+                    <button key={t.key} onClick={() => setActiveTab(t.key)}
+                      style={{ flex:1,padding:"8px 6px",border:"none",cursor:"pointer",borderRadius:"8px 8px 0 0",
+                        fontSize:11,fontWeight:700,lineHeight:1.3,
+                        background:active?t.color:"#f1f5f9",color:active?"#fff":"#64748b",
+                        borderBottom:active?`2px solid ${t.color}`:"2px solid transparent",
+                        transition:"all .2s",position:"relative" }}>
+                      {t.label}
+                      {hasData && !active && <span style={{ position:"absolute",top:6,right:6,width:7,height:7,borderRadius:"50%",background:"#16a34a" }}/>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ padding:"16px 20px" }}>
+              {Object.entries(grouped).map(([kat, items]) => {
+                const key    = `${activeTab}-${kat}`;
+                const isOpen = key in openKat ? openKat[key] : true;
+                const katSum = items.reduce((acc,it) => acc + (it._s!=null ? it._s*getQty(it.id) : 0), 0);
+                return (
+                  <div key={kat} style={{ marginBottom:8,border:"1px solid #e2e8f0",borderRadius:10,overflow:"hidden" }}>
+                    <button onClick={() => toggleKat(key)}
+                      style={{ width:"100%",padding:"10px 14px",border:"none",cursor:"pointer",fontFamily:"inherit",
+                        display:"flex",justifyContent:"space-between",alignItems:"center",
+                        background:isOpen?"#f0fdf4":"#f8fafc" }}>
+                      <span style={{ fontSize:13,fontWeight:700,color:"#166534" }}>{kat}</span>
+                      <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                        {katSum > 0 && <span style={{ background:"#16a34a",color:"#fff",borderRadius:20,padding:"1px 9px",fontSize:11,fontWeight:700 }}>
+                          +{katSum%1===0?katSum:katSum.toFixed(1)}</span>}
+                        <span style={{ color:"#94a3b8",fontSize:12 }}>{isOpen?"▲":"▼"}</span>
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div>
+                        {items.map((item, idx) => {
+                          const n    = getQty(item.id);
+                          const na   = item._s == null;
+                          const cont = na ? 0 : item._s * n;
+                          return (
+                            <div key={item.id} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",
+                              padding:"10px 14px",background:idx%2===0?"#fff":"#fafafa",
+                              borderTop:"1px solid #f1f5f9",opacity:na?0.38:1,
+                              position:"relative" }}>
+                              <div style={{ flex:1,paddingRight:8 }}>
+                                <div style={{ fontSize:13,color:"#1e293b",lineHeight:1.4 }}>
+                                  {na
+                                    ? <span>{item.label} <span style={{ fontSize:11,color:"#94a3b8" }}>(tidak berlaku untuk jenjang ini)</span></span>
+                                    : <HoverTooltip item={item} />
+                                  }
+                                </div>
+                                {!na && (
+                                  <div style={{ fontSize:11,marginTop:3,display:"flex",gap:12 }}>
+                                    <span style={{ color:"#16a34a" }}>Nilai/butir: <b>{item._s}</b></span>
+                                    {cont > 0 && <span style={{ color:"#0369a1" }}>Kontribusi: <b>{cont%1===0?cont:cont.toFixed(1)}</b></span>}
+                                  </div>
+                                )}
+                              </div>
+                              <QtyBtn value={n} onChange={v => setItemQty(item.id, v)} disabled={na} />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4 – HASIL */}
+        {res && !member?.nonStandar && (() => {
+          const rc = ratingCfg[res.rating];
+          return (
+            <div style={{ background:"#fff",borderRadius:14,padding:20,marginBottom:14,boxShadow:"0 1px 4px rgba(0,0,0,.08)" }}>
+              <div style={{ fontSize:11,color:"#16a34a",fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:16 }}>④ Hasil Penilaian SKP</div>
+              <div style={{ background:rc.bg,border:`2px solid ${rc.ring}`,borderRadius:12,padding:"18px 20px",marginBottom:18,display:"flex",alignItems:"center",gap:16 }}>
+                <div style={{ fontSize:48 }}>{rc.icon}</div>
+                <div>
+                  <div style={{ fontSize:38,fontWeight:900,color:rc.text,lineHeight:1 }}>{res.total.toFixed(2)}</div>
+                  <div style={{ fontSize:15,fontWeight:700,color:rc.text,marginTop:4 }}>{res.rating}</div>
+                  <div style={{ fontSize:12,color:rc.text,opacity:.8 }}>{rc.sub}</div>
+                  {res.hasZero && (
+                    <div style={{ fontSize:12,color:"#991b1b",marginTop:8,background:"#fee2e2",border:"1.5px solid #fca5a5",padding:"8px 12px",borderRadius:8,lineHeight:1.5 }}>
+                      ⚠️ <b>Rating diturunkan ke "Sesuai Ekspektasi"</b> meski nilai ≥ 110, karena komponen berikut belum diisi:<br/>
+                      {res.zeroComponents.map((c,i) => (
+                        <span key={c} style={{ display:"inline-block",marginTop:4,marginRight:6,background:"#fecaca",borderRadius:4,padding:"1px 7px",fontWeight:700,fontSize:11 }}>• {c}</span>
+                      ))}
+                      <div style={{ marginTop:6,fontSize:11,color:"#b91c1c" }}>Semua komponen wajib diisi minimal 1 butir untuk meraih "Di atas Ekspektasi" (Tabel 3.1 Kep. KaBRIN No. 15/I/HK/2026).</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{ display:"flex",gap:8,marginBottom:16,flexWrap:"wrap" }}>
+                {[{l:"Di atas Ekspektasi",r:"≥ 110 & semua komponen > 0",c:"#16a34a"},{l:"Sesuai Ekspektasi",r:"90–109.99 (atau ≥110 tapi ada komponen = 0)",c:"#b45309"},{l:"Di bawah Ekspektasi",r:"< 90",c:"#dc2626"}].map(t => (
+                  <div key={t.l} style={{ display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#64748b" }}>
+                    <div style={{ width:10,height:10,borderRadius:"50%",background:t.c }}/><b style={{ color:t.c }}>{t.l}</b> ({t.r})
+                  </div>
+                ))}
+              </div>
+              <div style={{ background:"#f8fafc",borderRadius:10,padding:16 }}>
+                {[
+                  { label:"Peran Strategis",        y:res.yPS, x:res.nd.PS, xBase:res.ndt.PS, max:res.nd.mPS, score:res.sPS, color:"#2563eb" },
+                  { label:"Outcome",                y:res.yOC, x:res.nd.OC, xBase:res.ndt.OC, max:res.nd.mOC, score:res.sOC, color:"#7c3aed" },
+                  { label:"Output",                 y:res.yOP, x:res.nd.OP, xBase:res.ndt.OP, max:res.nd.mOP, score:res.sOP, color:"#b45309" },
+                  { label:"Peningkatan Kompetensi", y:res.yPK, x:res.nd.PK, xBase:res.ndt.PK, max:res.nd.mPK, score:res.sPK, color:"#0369a1" },
+                ].map(c => <CompBar key={c.label} {...c} />)}
+              </div>
+              <div style={{ marginTop:12,background:"#f0fdf4",borderRadius:8,padding:"8px 12px",fontSize:11,color:"#166534" }}>
+                <b>Formula (Kep. KaBRIN No. 15/I/HK/2026, hal. 16):</b> nilai akhir = ndt + nk &nbsp;|&nbsp; nk = (nc/nd−1)×fk×nd &nbsp;|&nbsp; fk=0,5 jika nc&lt;nd; fk=0,4 jika nc≥nd &nbsp;|&nbsp; <b>ndt</b> = nilai dasar tahunan (12 bulan); <b>nd</b> = nilai dasar proporsional periode; <b>nc</b> = nilai capaian (dibatasi maks)
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* STEP 5 – SARAN */}
+        {res && !member?.nonStandar && suggestions.length > 0 && (
+          <div style={{ background:"#fff",borderRadius:14,padding:20,marginBottom:14,boxShadow:"0 1px 4px rgba(0,0,0,.08)",borderLeft:"4px solid #f59e0b" }}>
+            <div style={{ fontSize:11,color:"#b45309",fontWeight:700,textTransform:"uppercase",letterSpacing:2,marginBottom:14 }}>⑤ Saran Peningkatan Nilai SKP</div>
+            {suggestions.map(({ label, gap, top }) => (
+              <div key={label} style={{ marginBottom:16 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8,padding:"8px 12px",background:"#fef9c3",borderRadius:8 }}>
+                  <span style={{ fontSize:14 }}>📌</span>
+                  <div>
+                    <span style={{ fontSize:13,fontWeight:700,color:"#92400e" }}>{label}</span>
+                    <span style={{ fontSize:12,color:"#b45309",marginLeft:8 }}>masih kurang <b>{gap%1===0?gap:gap.toFixed(1)}</b> poin</span>
+                  </div>
+                </div>
+                {top.length > 0 ? (
+                  <div style={{ paddingLeft:12 }}>
+                    {top.map(it => (
+                      <div key={it.id} style={{ display:"flex",alignItems:"flex-start",gap:8,padding:"5px 0",borderBottom:"1px solid #fef9c3" }}>
+                        <span style={{ color:"#d97706",marginTop:1,flexShrink:0 }}>▸</span>
+                        <div style={{ fontSize:12,color:"#475569" }}>{it.label} <span style={{ color:"#16a34a",fontWeight:700 }}>(+{it._s}/butir)</span></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p style={{ fontSize:12,color:"#94a3b8",paddingLeft:12 }}>Semua butir tersedia sudah diinput.</p>}
+              </div>
+            ))}
+            {res.rating === "Sesuai Ekspektasi" && res.total < 110 && (
+              <div style={{ background:"#eff6ff",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#1d4ed8",marginTop:8 }}>
+                💡 Untuk <b>Di atas Ekspektasi</b> (≥110) butuh tambahan <b>{(110-res.total).toFixed(1)} poin</b> dan semua komponen harus &gt; 0.
+              </div>
+            )}
+            {res.hasZero && res.total >= 110 && (
+              <div style={{ background:"#eff6ff",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#1d4ed8",marginTop:8 }}>
+                💡 Nilai Anda sudah <b>{res.total.toFixed(2)}</b> (≥110), namun rating tidak bisa "Di atas Ekspektasi" selama ada komponen yang kosong.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ALL GOOD */}
+        {res && !member?.nonStandar && suggestions.length === 0 && (
+          <div style={{ background:"#f0fdf4",border:"2px solid #86efac",borderRadius:14,padding:"18px 20px",textAlign:"center",marginBottom:14 }}>
+            <div style={{ fontSize:28,marginBottom:6 }}>🎉</div>
+            <div style={{ fontSize:16,fontWeight:800,color:"#166534" }}>Semua komponen sudah memenuhi nilai dasar!</div>
+            {res.rating === "Di atas Ekspektasi" && <div style={{ fontSize:13,color:"#15803d",marginTop:4 }}>Nilai SKP melampaui target. Pertahankan!</div>}
+          </div>
+        )}
+
+        <div style={{ textAlign:"center",fontSize:11,color:"#94a3b8",marginTop:24 }}>
+          Berdasarkan Kep. KaBRIN No. 15/I/HK/2026<br/>
+          PRSDI – Pusat Riset Sains Data dan Informasi, OR EI-BRIN
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Mount React app + hide loading screen
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+document.getElementById("loading").style.display = "none";
+</script>
+</body>
+</html>
